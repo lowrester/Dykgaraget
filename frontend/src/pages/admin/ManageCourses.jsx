@@ -86,7 +86,6 @@ export default function ManageCourses() {
     if (!form.name.trim()) e.name = 'Namn krävs'
     if (!form.price || parseFloat(form.price) < 0) e.price = 'Ange ett giltigt pris'
     if (form.duration < 1) e.duration = 'Minst 1 dag'
-    if (!form.description.trim()) e.description = 'Beskrivning krävs'
     if (form.max_participants < form.min_participants) e.max_participants = 'Max måste vara ≥ min'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -192,7 +191,7 @@ export default function ManageCourses() {
           <input className="form-input" value={form.included_materials} onChange={(e) => set('included_materials', e.target.value)} />
         </div>
         <div className="form-group">
-          <label className="form-label">Beskrivning *</label>
+          <label className="form-label">Beskrivning</label>
           <textarea className="form-input form-textarea" rows={3} value={form.description} onChange={(e) => set('description', e.target.value)} />
           {errors.description && <span className="error-msg">{errors.description}</span>}
         </div>
