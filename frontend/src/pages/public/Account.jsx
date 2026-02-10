@@ -104,8 +104,10 @@ export default function Account() {
                     <Card>
                         <h4>Din profil</h4>
                         <div style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                            <p><strong>Namn:</strong> {user.firstName} {user.lastName}</p>
+                            <p><strong>Namn:</strong> {user.firstName || user.first_name} {user.lastName || user.last_name}</p>
                             <p><strong>E-post:</strong> {user.email}</p>
+                            <p><strong>Tel:</strong> {user.phone || '—'}</p>
+                            <p><strong>Adress:</strong> {user.address || '—'}, {user.postalCode || user.postal_code || ''} {user.city || ''}</p>
                             <p><strong>Roll:</strong> {user.role === 'admin' ? 'Administratör' : 'Kund'}</p>
                         </div>
 
