@@ -5,38 +5,53 @@ import { Card, Button, Input, Spinner, Alert } from '../../components/common/ind
 const STEPS = ['Välj kurs', 'Dina uppgifter', 'Utrustning', 'Bekräftelse']
 
 export default function Booking() {
-  const [step, setStep]         = useState(0)
-  const [form, setForm]         = useState({
+  const [step, setStep] = useState(0)
+  const [form, setForm] = useState({
     course_id: '', booking_date: '', booking_time: '09:00', participants: 1,
     first_name: '', last_name: '', email: '', phone: '',
     equipment_ids: [], notes: '',
   })
-  const [errors, setErrors]     = useState({})
-  const [success, setSuccess]   = useState(null)
-  const [loading, setLoading]   = useState(false)
+  const [errors, setErrors] = useState({})
+  const [success, setSuccess] = useState(null)
+  const [loading, setLoading] = useState(false)
 
-  const { courses, fetch: fetchCourses }       = useCoursesStore()
-  const { equipment, fetch: fetchEquipment }   = useEquipmentStore()
-  const { create: createBooking }              = useBookingsStore()
-  const features                               = useSettingsStore((s) => s.features)
+  const { courses, fetch: fetchCourses, fetchSchedules } = useCoursesStore()
+  const { equipment, fetch: fetchEquipment } = useEquipmentStore()
+  const { create: createBooking } = useBookingsStore()
+  const features = useSettingsStore((s) => s.features)
+
+  const [schedules, setSchedules] = useState([])
+  const [schedLoading, setSchedLoading] = useState(false)
 
   useEffect(() => { fetchCourses() }, [fetchCourses])
   useEffect(() => {
     if (features.equipment) fetchEquipment()
   }, [features.equipment, fetchEquipment])
 
+  // Fetch schedules when course changes
+  useEffect(() => {
+    if (form.course_id) {
+      setSchedLoading(true)
+      fetchSchedules(form.course_id)
+        .then(setSchedules)
+        .finally(() => setSchedLoading(false))
+    } else {
+      setSchedules([])
+    }
+  }, [form.course_id, fetchSchedules])
+
   const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
 
   const validateStep = () => {
     const e = {}
     if (step === 0) {
-      if (!form.course_id)   e.course_id   = 'Välj en kurs'
-      if (!form.booking_date) e.booking_date = 'Välj ett datum'
+      if (!form.course_id) e.course_id = 'Välj en kurs'
+      if (!form.booking_date && !form.schedule_id) e.booking_date = 'Välj ett datum'
     }
     if (step === 1) {
-      if (!form.first_name)  e.first_name  = 'Förnamn krävs'
-      if (!form.last_name)   e.last_name   = 'Efternamn krävs'
-      if (!form.email)       e.email       = 'E-post krävs'
+      if (!form.first_name) e.first_name = 'Förnamn krävs'
+      if (!form.last_name) e.last_name = 'Efternamn krävs'
+      if (!form.email) e.email = 'E-post krävs'
       if (form.email && !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Ogiltig e-post'
     }
     setErrors(e)
@@ -59,16 +74,17 @@ export default function Booking() {
     setLoading(true)
     try {
       const booking = await createBooking({
-        course_id:     parseInt(form.course_id),
-        booking_date:  form.booking_date,
-        booking_time:  form.booking_time,
-        participants:  parseInt(form.participants) || 1,
-        first_name:    form.first_name,
-        last_name:     form.last_name,
-        email:         form.email,
-        phone:         form.phone,
+        course_id: parseInt(form.course_id),
+        booking_date: form.booking_date,
+        booking_time: form.booking_time,
+        schedule_id: form.schedule_id ? parseInt(form.schedule_id) : null,
+        participants: parseInt(form.participants) || 1,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        phone: form.phone,
         equipment_ids: form.equipment_ids,
-        notes:         form.notes,
+        notes: form.notes,
       })
       setSuccess(booking)
       setStep(4)
@@ -80,6 +96,7 @@ export default function Booking() {
   }
 
   const selectedCourse = courses.find((c) => c.id === parseInt(form.course_id))
+  const selectedSchedule = schedules.find(s => s.id === parseInt(form.schedule_id))
 
   if (step === 4) {
     return (
@@ -90,7 +107,7 @@ export default function Booking() {
           <p>Tack {success?.first_name}! Din bokning är registrerad.</p>
           <p>Bokningsnummer: <strong>#{success?.id}</strong></p>
           <p>Bekräftelse skickas till <strong>{success?.email}</strong></p>
-          <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id:'',booking_date:'',booking_time:'09:00',participants:1,first_name:'',last_name:'',email:'',phone:'',equipment_ids:[],notes:'' }) }}>
+          <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id: '', booking_date: '', booking_time: '09:00', participants: 1, first_name: '', last_name: '', email: '', phone: '', equipment_ids: [], notes: '', schedule_id: null }) }}>
             Gör en ny bokning
           </button>
         </div>
@@ -118,18 +135,22 @@ export default function Booking() {
           <div className="booking-step">
             <h2>Välj kurs och datum</h2>
             <div className="form-group">
-              <label className="form-label">Kurs *</label>
+              <label className="form-label">1. Vilken kurs vill du gå? *</label>
               {errors.course_id && <span className="error-msg">{errors.course_id}</span>}
               <div className="course-select-grid">
                 {courses.filter(c => c.is_active).length === 0 ? (
-                  <p style={{color:'var(--gray-400)',fontStyle:'italic',gridColumn:'1/-1',padding:'1rem 0'}}>
+                  <p style={{ color: 'var(--gray-400)', fontStyle: 'italic', gridColumn: '1/-1', padding: '1rem 0' }}>
                     Inga kurser tillgängliga för tillfället. Kontakta oss direkt.
                   </p>
                 ) : courses.filter(c => c.is_active).map((course) => (
                   <div
                     key={course.id}
                     className={`course-option ${form.course_id === String(course.id) ? 'selected' : ''}`}
-                    onClick={() => set('course_id', String(course.id))}
+                    onClick={() => {
+                      set('course_id', String(course.id))
+                      set('schedule_id', null)
+                      set('booking_date', '')
+                    }}
                   >
                     <strong>{course.name}</strong>
                     <span>{parseFloat(course.price).toLocaleString('sv-SE')} kr</span>
@@ -138,9 +159,51 @@ export default function Booking() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-2">
-              <Input label="Datum" type="date" value={form.booking_date} onChange={(e) => set('booking_date', e.target.value)} error={errors.booking_date} required min={new Date().toISOString().split('T')[0]} />
-              <Input label="Tid" type="time" value={form.booking_time} onChange={(e) => set('booking_time', e.target.value)} />
+
+            {form.course_id && (
+              <div className="form-group" style={{ marginTop: '2rem' }}>
+                <label className="form-label">2. Välj ett datum *</label>
+                {errors.booking_date && <span className="error-msg">{errors.booking_date}</span>}
+
+                {schedLoading ? <Spinner /> : (
+                  <div className="course-select-grid">
+                    {schedules.map(s => (
+                      <div
+                        key={s.id}
+                        className={`course-option ${form.schedule_id === String(s.id) ? 'selected' : ''}`}
+                        onClick={() => {
+                          set('schedule_id', String(s.id))
+                          set('booking_date', s.start_date)
+                          set('booking_time', s.start_time)
+                        }}
+                      >
+                        <strong>{new Date(s.start_date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+                        <span>Start kl {s.start_time.substring(0, 5)}</span>
+                        <span>{s.max_participants - s.current_participants} platser kvar</span>
+                      </div>
+                    ))}
+                    <div
+                      className={`course-option ${!form.schedule_id && form.booking_date === 'CONTACT' ? 'selected' : ''}`}
+                      onClick={() => {
+                        set('schedule_id', null)
+                        set('booking_date', 'CONTACT')
+                      }}
+                    >
+                      <strong>Inget datum passar mig</strong>
+                      <span>Kontakta mig för andra förslag</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {form.booking_date === 'CONTACT' && (
+              <Alert type="info" style={{ marginTop: '1rem' }}>
+                Inga problem! Fyll i dina uppgifter i nästa steg så återkommer vi med förslag på datum som passar dig.
+              </Alert>
+            )}
+
+            <div className="grid grid-2" style={{ marginTop: '2rem' }}>
               <Input label="Antal deltagare" type="number" min={1} max={10} value={form.participants} onChange={(e) => set('participants', e.target.value)} />
             </div>
           </div>
@@ -199,8 +262,13 @@ export default function Booking() {
             {errors.submit && <Alert type="error">{errors.submit}</Alert>}
             <div className="summary">
               <div className="summary-row"><span>Kurs:</span><strong>{selectedCourse?.name}</strong></div>
-              <div className="summary-row"><span>Datum:</span><strong>{form.booking_date}</strong></div>
-              <div className="summary-row"><span>Tid:</span><strong>kl {form.booking_time}</strong></div>
+              <div className="summary-row">
+                <span>Datum:</span>
+                <strong>{form.booking_date === 'CONTACT' ? 'Kontakta mig för datum' : form.booking_date}</strong>
+              </div>
+              {form.booking_date !== 'CONTACT' && (
+                <div className="summary-row"><span>Tid:</span><strong>kl {form.booking_time.substring(0, 5)}</strong></div>
+              )}
               <div className="summary-row"><span>Deltagare:</span><strong>{form.participants}</strong></div>
               <div className="summary-row"><span>Namn:</span><strong>{form.first_name} {form.last_name}</strong></div>
               <div className="summary-row"><span>E-post:</span><strong>{form.email}</strong></div>

@@ -3,10 +3,10 @@ import client, { setToken, clearToken, loadToken } from '../api/client.js'
 
 // ── Auth store ─────────────────────────────────────────────────
 export const useAuthStore = create((set) => ({
-  user:    null,
-  token:   null,
+  user: null,
+  token: null,
   loading: false,
-  error:   null,
+  error: null,
 
   // Körs vid app-start: återställ session om token finns i sessionStorage
   initAuth: async () => {
@@ -48,12 +48,12 @@ export const useSettingsStore = create((set, get) => ({
   features: {
     equipment: true,
     invoicing: true,
-    payment:   false,
-    email:     true,
+    payment: false,
+    email: true,
   },
   settings: [],
-  loading:  false,
-  error:    null,
+  loading: false,
+  error: null,
 
   fetchFeatures: async () => {
     try {
@@ -83,7 +83,7 @@ export const useSettingsStore = create((set, get) => ({
 export const useCoursesStore = create((set) => ({
   courses: [],
   loading: false,
-  error:   null,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
@@ -111,13 +111,26 @@ export const useCoursesStore = create((set) => ({
     await client.delete(`/courses/${id}`)
     set((s) => ({ courses: s.courses.filter((c) => c.id !== id) }))
   },
+
+  // Schedules
+  fetchSchedules: async (id) => {
+    return await client.get(`/courses/${id}/schedules`)
+  },
+
+  addSchedule: async (id, payload) => {
+    return await client.post(`/courses/${id}/schedules`, payload)
+  },
+
+  removeSchedule: async (id, scheduleId) => {
+    return await client.delete(`/courses/${id}/schedules/${scheduleId}`)
+  },
 }))
 
 // ── Equipment store ────────────────────────────────────────────
 export const useEquipmentStore = create((set) => ({
   equipment: [],
-  loading:   false,
-  error:     null,
+  loading: false,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
@@ -150,8 +163,8 @@ export const useEquipmentStore = create((set) => ({
 // ── Instructors store ──────────────────────────────────────────
 export const useInstructorsStore = create((set) => ({
   instructors: [],
-  loading:     false,
-  error:       null,
+  loading: false,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
@@ -184,8 +197,8 @@ export const useInstructorsStore = create((set) => ({
 // ── Bookings store ─────────────────────────────────────────────
 export const useBookingsStore = create((set) => ({
   bookings: [],
-  loading:  false,
-  error:    null,
+  loading: false,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })
@@ -213,8 +226,8 @@ export const useBookingsStore = create((set) => ({
 // ── Invoices store ─────────────────────────────────────────────
 export const useInvoicesStore = create((set) => ({
   invoices: [],
-  loading:  false,
-  error:    null,
+  loading: false,
+  error: null,
 
   fetch: async () => {
     set({ loading: true, error: null })

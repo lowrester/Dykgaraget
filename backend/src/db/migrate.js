@@ -109,6 +109,7 @@ async function run() {
         email         VARCHAR(200),
         phone         VARCHAR(50),
         notes         TEXT,
+        schedule_id   INT REFERENCES course_schedules(id) ON DELETE SET NULL,
         created_at    TIMESTAMP DEFAULT NOW(),
         updated_at    TIMESTAMP DEFAULT NOW()
       )
@@ -121,6 +122,21 @@ async function run() {
         equipment_id INT REFERENCES equipment(id)  ON DELETE SET NULL,
         quantity     INT           DEFAULT 1,
         price        NUMERIC(10,2) DEFAULT 0
+      )
+    `)
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS course_schedules (
+        id               SERIAL PRIMARY KEY,
+        course_id        INT REFERENCES courses(id) ON DELETE CASCADE,
+        start_date       DATE NOT NULL,
+        start_time       TIME NOT NULL,
+        end_date         DATE,
+        max_participants INT DEFAULT 10,
+        current_participants INT DEFAULT 0,
+        is_active        BOOLEAN DEFAULT true,
+        created_at       TIMESTAMP DEFAULT NOW(),
+        updated_at       TIMESTAMP DEFAULT NOW()
       )
     `)
 
@@ -193,19 +209,19 @@ async function run() {
 
     // ── Seed: settings ────────────────────────────────────────
     const settings = [
-      ['feature_equipment', 'true',  'features', 'Utrustningshantering'],
-      ['feature_invoicing', 'true',  'features', 'Fakturering (PDF + email)'],
-      ['feature_payment',   'false', 'features', 'Betalningar via Stripe (kräver invoicing)'],
-      ['feature_email',     'true',  'features', 'Email-notifieringar'],
-      ['company_name',      'Dykgaraget AB',               'company', 'Företagsnamn'],
-      ['company_org_number','556XXX-XXXX',                  'company', 'Organisationsnummer'],
-      ['company_vat_number','SE556XXXXXXX01',               'company', 'VAT-nummer'],
-      ['company_address',   'Dykgatan 1, 123 45 Stockholm', 'company', 'Adress'],
-      ['company_email',     'info@dykgaraget.se',           'company', 'E-post'],
-      ['company_phone',     '070-123 45 67',                'company', 'Telefon'],
-      ['company_bank',      '1234-5 678 901',               'company', 'Bankkontonummer'],
-      ['invoice_prefix',    'DYK', 'invoicing', 'Prefix för fakturanummer'],
-      ['invoice_terms_days','30',  'invoicing', 'Betalningsvillkor (dagar)'],
+      ['feature_equipment', 'true', 'features', 'Utrustningshantering'],
+      ['feature_invoicing', 'true', 'features', 'Fakturering (PDF + email)'],
+      ['feature_payment', 'false', 'features', 'Betalningar via Stripe (kräver invoicing)'],
+      ['feature_email', 'true', 'features', 'Email-notifieringar'],
+      ['company_name', 'Dykgaraget AB', 'company', 'Företagsnamn'],
+      ['company_org_number', '556XXX-XXXX', 'company', 'Organisationsnummer'],
+      ['company_vat_number', 'SE556XXXXXXX01', 'company', 'VAT-nummer'],
+      ['company_address', 'Dykgatan 1, 123 45 Stockholm', 'company', 'Adress'],
+      ['company_email', 'info@dykgaraget.se', 'company', 'E-post'],
+      ['company_phone', '070-123 45 67', 'company', 'Telefon'],
+      ['company_bank', '1234-5 678 901', 'company', 'Bankkontonummer'],
+      ['invoice_prefix', 'DYK', 'invoicing', 'Prefix för fakturanummer'],
+      ['invoice_terms_days', '30', 'invoicing', 'Betalningsvillkor (dagar)'],
     ]
     for (const [key, value, category, description] of settings) {
       await client.query(
@@ -242,10 +258,10 @@ async function run() {
 
     // ── Seed: courses ─────────────────────────────────────────
     const courses = [
-      ['Open Water Diver',    'Nybörjare',    3, 4500, 'Din första certifiering! Lär dig grunderna i dykning ned till 18 meter.',   'Minst 10 år, kunna simma',             'Kursbok, certifikat, utrustning under kurs', 10, 1],
-      ['Advanced Open Water', 'Fortsättning', 2, 3500, 'Utveckla dina färdigheter med specialdyk inom navigation och djupdykning.', 'Open Water Diver-certifiering',         'Adventure dives, logbook, certifikat',       8, 1],
-      ['Rescue Diver',        'Avancerad',    4, 5500, 'Lär dig hantera nödsituationer och bli en tryggare dykare.',                'Advanced OW + minst 20 loggade dyk',    'Rescue manual, certifikat',                  6, 2],
-      ['Divemaster',          'Professionell',6, 8500, 'Ta första steget mot en professionell dykarkarriär.',                      'Rescue Diver + minst 40 loggade dyk',   'Divemaster crew pack, certifikat',           4, 1],
+      ['Open Water Diver', 'Nybörjare', 3, 4500, 'Din första certifiering! Lär dig grunderna i dykning ned till 18 meter.', 'Minst 10 år, kunna simma', 'Kursbok, certifikat, utrustning under kurs', 10, 1],
+      ['Advanced Open Water', 'Fortsättning', 2, 3500, 'Utveckla dina färdigheter med specialdyk inom navigation och djupdykning.', 'Open Water Diver-certifiering', 'Adventure dives, logbook, certifikat', 8, 1],
+      ['Rescue Diver', 'Avancerad', 4, 5500, 'Lär dig hantera nödsituationer och bli en tryggare dykare.', 'Advanced OW + minst 20 loggade dyk', 'Rescue manual, certifikat', 6, 2],
+      ['Divemaster', 'Professionell', 6, 8500, 'Ta första steget mot en professionell dykarkarriär.', 'Rescue Diver + minst 40 loggade dyk', 'Divemaster crew pack, certifikat', 4, 1],
     ]
     for (const [name, level, duration, price, description, prerequisites, included, max, min] of courses) {
       await client.query(
@@ -257,18 +273,18 @@ async function run() {
 
     // ── Seed: equipment ───────────────────────────────────────
     const equipment = [
-      ['Wetsuit',      'Wetsuit',   'S',       10, 100],
-      ['Wetsuit',      'Wetsuit',   'M',       15, 100],
-      ['Wetsuit',      'Wetsuit',   'L',       12, 100],
-      ['Wetsuit',      'Wetsuit',   'XL',       8, 100],
-      ['BCD',          'BCD',       'S',        8, 100],
-      ['BCD',          'BCD',       'M',       12, 100],
-      ['BCD',          'BCD',       'L',       10, 100],
-      ['Mask & Fenor', 'Mask',      '36-39',   10, 100],
-      ['Mask & Fenor', 'Mask',      '40-43',   15, 100],
-      ['Mask & Fenor', 'Mask',      '44-47',   12, 100],
-      ['Regulator',    'Regulator', 'OneSize', 20, 100],
-      ['Dykdator',     'Computer',  'OneSize', 15, 100],
+      ['Wetsuit', 'Wetsuit', 'S', 10, 100],
+      ['Wetsuit', 'Wetsuit', 'M', 15, 100],
+      ['Wetsuit', 'Wetsuit', 'L', 12, 100],
+      ['Wetsuit', 'Wetsuit', 'XL', 8, 100],
+      ['BCD', 'BCD', 'S', 8, 100],
+      ['BCD', 'BCD', 'M', 12, 100],
+      ['BCD', 'BCD', 'L', 10, 100],
+      ['Mask & Fenor', 'Mask', '36-39', 10, 100],
+      ['Mask & Fenor', 'Mask', '40-43', 15, 100],
+      ['Mask & Fenor', 'Mask', '44-47', 12, 100],
+      ['Regulator', 'Regulator', 'OneSize', 20, 100],
+      ['Dykdator', 'Computer', 'OneSize', 15, 100],
     ]
     for (const [name, category, size, qty, price] of equipment) {
       await client.query(
@@ -280,9 +296,9 @@ async function run() {
 
     // ── Seed: instructors ─────────────────────────────────────
     const instructors = [
-      ['Anna Andersson', 'Vrakdykning & Navigation',         12, 'PADI Master Instructor, SSI Instructor Trainer', 'Anna har 12 års erfarenhet och är specialist på vrakdykning.',          600],
-      ['Erik Johansson', 'Teknisk dykning & Djupdykning',     8, 'PADI Tec Deep Instructor, SSI Extended Range',   'Erik är specialist på teknisk dykning och avancerad djupdykning.',      750],
-      ['Maria Svensson', 'Undervattensfotografi & Nybörjare', 5, 'PADI OW Scuba Instructor, UW Photography',       'Maria kombinerar dykning med fotografi och älskar att undervisa nybörjare.', 500],
+      ['Anna Andersson', 'Vrakdykning & Navigation', 12, 'PADI Master Instructor, SSI Instructor Trainer', 'Anna har 12 års erfarenhet och är specialist på vrakdykning.', 600],
+      ['Erik Johansson', 'Teknisk dykning & Djupdykning', 8, 'PADI Tec Deep Instructor, SSI Extended Range', 'Erik är specialist på teknisk dykning och avancerad djupdykning.', 750],
+      ['Maria Svensson', 'Undervattensfotografi & Nybörjare', 5, 'PADI OW Scuba Instructor, UW Photography', 'Maria kombinerar dykning med fotografi och älskar att undervisa nybörjare.', 500],
     ]
     for (const [name, specialty, years, certs, bio, rate] of instructors) {
       await client.query(

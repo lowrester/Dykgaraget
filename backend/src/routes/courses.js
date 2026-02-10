@@ -46,8 +46,8 @@ router.post('/', authenticateAdmin, async (req, res) => {
           certification_agency,max_participants,min_participants,is_active)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
       [name, level, duration, price, description, prerequisites,
-       included_materials, certification_agency || 'PADI',
-       max_participants || 10, min_participants || 1, is_active]
+        included_materials, certification_agency || 'PADI',
+        max_participants || 10, min_participants || 1, is_active]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -59,12 +59,12 @@ router.post('/', authenticateAdmin, async (req, res) => {
 router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
     const fields = [
-      'name','level','duration','price','description','prerequisites',
-      'included_materials','certification_agency','max_participants',
-      'min_participants','is_active'
+      'name', 'level', 'duration', 'price', 'description', 'prerequisites',
+      'included_materials', 'certification_agency', 'max_participants',
+      'min_participants', 'is_active'
     ]
     const updates = []
-    const values  = []
+    const values = []
     let i = 1
 
     for (const field of fields) {
@@ -94,6 +94,56 @@ router.delete('/:id', authenticateAdmin, async (req, res) => {
     const result = await pool.query('DELETE FROM courses WHERE id = $1 RETURNING id', [req.params.id])
     if (result.rows.length === 0) return res.status(404).json({ error: 'Kurs hittades inte' })
     res.json({ message: 'Kurs borttagen' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Schedules ───────────────────────────────────────────────
+
+// GET /api/courses/:id/schedules
+router.get('/:id/schedules', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM course_schedules 
+       WHERE course_id = $1 AND is_active = true AND start_date >= CURRENT_DATE
+       ORDER BY start_date, start_time`,
+      [req.params.id]
+    )
+    res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/courses/:id/schedules (admin)
+router.post('/:id/schedules', authenticateAdmin, async (req, res) => {
+  try {
+    const { start_date, start_time, end_date, max_participants } = req.body
+    if (!start_date || !start_time) {
+      return res.status(400).json({ error: 'Startdatum och tid krävs' })
+    }
+
+    const result = await pool.query(
+      `INSERT INTO course_schedules (course_id, start_date, start_time, end_date, max_participants)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [req.params.id, start_date, start_time, end_date, max_participants || 10]
+    )
+    res.status(201).json(result.rows[0])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// DELETE /api/courses/:id/schedules/:scheduleId (admin)
+router.delete('/:id/schedules/:scheduleId', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM course_schedules WHERE id = $1 AND course_id = $2 RETURNING id',
+      [req.params.scheduleId, req.params.id]
+    )
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Schema-post hittades inte' })
+    res.json({ message: 'Schema-post borttagen' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

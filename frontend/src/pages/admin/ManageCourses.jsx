@@ -2,19 +2,25 @@ import { useState, useEffect, useMemo } from 'react'
 import { useCoursesStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input, Alert, LevelBadge } from '../../components/common/index.jsx'
 
-const EMPTY = { name:'', level:'Nybörjare', duration:3, price:'', description:'', prerequisites:'', included_materials:'', certification_agency:'PADI', max_participants:10, min_participants:1, is_active:true }
-const LEVELS = ['Nybörjare','Fortsättning','Avancerad','Professionell']
+const EMPTY = { name: '', level: 'Nybörjare', duration: 3, price: '', description: '', prerequisites: '', included_materials: '', certification_agency: 'PADI', max_participants: 10, min_participants: 1, is_active: true }
+const LEVELS = ['Nybörjare', 'Fortsättning', 'Avancerad', 'Professionell']
 
 export default function ManageCourses() {
-  const { courses, fetch, create, update, remove, loading } = useCoursesStore()
-  const [modal,  setModal]  = useState(false)
+  const { courses, fetch, create, update, remove, loading, fetchSchedules, addSchedule, removeSchedule } = useCoursesStore()
+  const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form,   setForm]   = useState(EMPTY)
+  const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
-  const [alert,  setAlert]  = useState(null)
+  const [alert, setAlert] = useState(null)
   const [saving, setSaving] = useState(false)
   const [sortBy, setSortBy] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
+
+  // Schedules state
+  const [schedModal, setSchedModal] = useState(false)
+  const [schedCourse, setSchedCourse] = useState(null)
+  const [schedules, setSchedules] = useState([])
+  const [schedForm, setSchedForm] = useState({ start_date: '', start_time: '09:00', end_date: '', max_participants: 10 })
 
   const sorted = useMemo(() => {
     return [...courses].sort((a, b) => {
@@ -33,18 +39,51 @@ export default function ManageCourses() {
 
   useEffect(() => { fetch() }, [fetch])
 
-  const openNew  = () => { setEditing(null); setForm(EMPTY); setErrors({}); setModal(true) }
+  const openNew = () => { setEditing(null); setForm(EMPTY); setErrors({}); setModal(true) }
   const openEdit = (c) => { setEditing(c); setForm({ ...c, price: String(c.price) }); setErrors({}); setModal(true) }
   const closeModal = () => { setModal(false); setEditing(null) }
+
+  // Schedules handlers
+  const openSchedules = async (c) => {
+    setSchedCourse(c)
+    setSchedModal(true)
+    try {
+      const data = await fetchSchedules(c.id)
+      setSchedules(data)
+    } catch (err) {
+      setAlert({ type: 'error', msg: 'Kunde inte ladda schema: ' + err.message })
+    }
+  }
+
+  const handleAddSchedule = async () => {
+    if (!schedForm.start_date || !schedForm.start_time) return
+    try {
+      const resp = await addSchedule(schedCourse.id, schedForm)
+      setSchedules(s => [...s, resp].sort((a, b) => a.start_date.localeCompare(b.start_date)))
+      setSchedForm({ ...schedForm, start_date: '' })
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  const handleRemoveSchedule = async (sid) => {
+    if (!window.confirm('Ta bort detta datum?')) return
+    try {
+      await removeSchedule(schedCourse.id, sid)
+      setSchedules(s => s.filter(i => i.id !== sid))
+    } catch (err) {
+      alert(err.message)
+    }
+  }
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim())                       e.name        = 'Namn krävs'
-    if (!form.price || parseFloat(form.price) < 0) e.price    = 'Ange ett giltigt pris'
-    if (form.duration < 1)                        e.duration   = 'Minst 1 dag'
-    if (!form.description.trim())                 e.description = 'Beskrivning krävs'
+    if (!form.name.trim()) e.name = 'Namn krävs'
+    if (!form.price || parseFloat(form.price) < 0) e.price = 'Ange ett giltigt pris'
+    if (form.duration < 1) e.duration = 'Minst 1 dag'
+    if (!form.description.trim()) e.description = 'Beskrivning krävs'
     if (form.max_participants < form.min_participants) e.max_participants = 'Max måste vara ≥ min'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -56,7 +95,7 @@ export default function ManageCourses() {
     try {
       const payload = { ...form, price: parseFloat(form.price), duration: parseInt(form.duration), max_participants: parseInt(form.max_participants), min_participants: parseInt(form.min_participants) }
       if (editing) await update(editing.id, payload)
-      else         await create(payload)
+      else await create(payload)
       setAlert({ type: 'success', msg: editing ? 'Kurs uppdaterad!' : 'Kurs skapad!' })
       closeModal()
     } catch (err) {
@@ -89,12 +128,12 @@ export default function ManageCourses() {
           <table className="admin-table">
             <thead>
               <tr>
-                <th style={{cursor:'pointer'}} onClick={() => toggleSort('name')}>Namn<SortIcon col="name"/></th>
-                <th style={{cursor:'pointer'}} onClick={() => toggleSort('level')}>Nivå<SortIcon col="level"/></th>
-                <th style={{cursor:'pointer'}} onClick={() => toggleSort('duration')}>Längd<SortIcon col="duration"/></th>
-                <th style={{cursor:'pointer'}} onClick={() => toggleSort('price')}>Pris<SortIcon col="price"/></th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('name')}>Namn<SortIcon col="name" /></th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('level')}>Nivå<SortIcon col="level" /></th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('duration')}>Längd<SortIcon col="duration" /></th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('price')}>Pris<SortIcon col="price" /></th>
                 <th>Max</th>
-                <th style={{cursor:'pointer'}} onClick={() => toggleSort('is_active')}>Status<SortIcon col="is_active"/></th>
+                <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('is_active')}>Status<SortIcon col="is_active" /></th>
                 <th>Åtgärder</th>
               </tr>
             </thead>
@@ -110,7 +149,8 @@ export default function ManageCourses() {
                   <td><span className={`badge ${c.is_active ? 'badge-success' : 'badge-default'}`}>{c.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
                   <td>
                     <button className="btn btn-sm btn-secondary" onClick={() => openEdit(c)}>Redigera</button>
-                    <button className="btn btn-sm btn-danger"    onClick={() => handleDelete(c)} style={{marginLeft:'0.5rem'}}>Ta bort</button>
+                    <button className="btn btn-sm btn-outline" onClick={() => openSchedules(c)} style={{ marginLeft: '0.5rem' }}>📅 Schema</button>
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(c)} style={{ marginLeft: '0.5rem' }}>Ta bort</button>
                   </td>
                 </tr>
               ))}
@@ -119,6 +159,7 @@ export default function ManageCourses() {
         </Card>
       )}
 
+      {/* Edit Modal */}
       <Modal isOpen={modal} onClose={closeModal} title={editing ? 'Redigera kurs' : 'Ny kurs'} size="lg">
         {errors.submit && <Alert type="error">{errors.submit}</Alert>}
         <div className="grid grid-2">
@@ -134,7 +175,7 @@ export default function ManageCourses() {
           <Input label="Min deltagare" type="number" min={1} value={form.min_participants} onChange={(e) => set('min_participants', e.target.value)} />
           <Input label="Max deltagare" type="number" min={1} value={form.max_participants} onChange={(e) => set('max_participants', e.target.value)} error={errors.max_participants} />
           <Input label="Certifieringsorgan" value={form.certification_agency} onChange={(e) => set('certification_agency', e.target.value)} />
-          <div className="form-group" style={{display:'flex',alignItems:'center',gap:'0.5rem',paddingTop:'1.5rem'}}>
+          <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
             <input type="checkbox" id="is_active" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} />
             <label htmlFor="is_active">Aktiv (visas på webbplatsen)</label>
           </div>
@@ -155,6 +196,48 @@ export default function ManageCourses() {
         <div className="modal-footer">
           <Button variant="secondary" onClick={closeModal}>Avbryt</Button>
           <Button onClick={handleSave} loading={saving}>Spara</Button>
+        </div>
+      </Modal>
+
+      {/* Schedule Modal */}
+      <Modal isOpen={schedModal} onClose={() => setSchedModal(false)} title={`Schema: ${schedCourse?.name}`} size="lg">
+        <Card style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--gray-50)' }}>
+          <h4 style={{ marginBottom: '.75rem', fontSize: '.9rem' }}>Lägg till datum</h4>
+          <div className="grid grid-4" style={{ alignItems: 'flex-end' }}>
+            <Input label="Datum" type="date" value={schedForm.start_date} onChange={e => setSchedForm({ ...schedForm, start_date: e.target.value })} />
+            <Input label="Tid" type="time" value={schedForm.start_time} onChange={e => setSchedForm({ ...schedForm, start_time: e.target.value })} />
+            <Input label="Max deltagare" type="number" value={schedForm.max_participants} onChange={e => setSchedForm({ ...schedForm, max_participants: e.target.value })} />
+            <Button onClick={handleAddSchedule} style={{ marginBottom: '1rem' }}>Lägg till</Button>
+          </div>
+        </Card>
+
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Tid</th>
+              <th>Max deltagare</th>
+              <th>Platser kvar</th>
+              <th>Åtgärder</th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedules.length === 0 && <tr><td colSpan={5} className="empty">Inga datum inlagda</td></tr>}
+            {schedules.map(s => (
+              <tr key={s.id}>
+                <td>{s.start_date}</td>
+                <td>{s.start_time.substring(0, 5)}</td>
+                <td>{s.max_participants}</td>
+                <td>{s.max_participants - s.current_participants}</td>
+                <td>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleRemoveSchedule(s.id)}>Ta bort</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="modal-footer">
+          <Button onClick={() => setSchedModal(false)}>Klar</Button>
         </div>
       </Modal>
     </AdminLayout>

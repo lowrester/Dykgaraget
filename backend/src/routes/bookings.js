@@ -47,11 +47,39 @@ router.post('/', async (req, res) => {
 
     const {
       course_id, booking_date, booking_time, participants = 1,
-      first_name, last_name, email, phone, equipment_ids = [], notes
+      first_name, last_name, email, phone, equipment_ids = [], notes,
+      schedule_id
     } = req.body
 
-    if (!course_id || !booking_date || !booking_time || !first_name || !last_name || !email) {
-      return res.status(400).json({ error: 'Kurs, datum, tid och kontaktuppgifter krävs' })
+    if (!course_id || (!booking_date && !schedule_id) || !first_name || !last_name || !email) {
+      return res.status(400).json({ error: 'Kurs, datum och kontaktuppgifter krävs' })
+    }
+
+    const participantCount = Math.max(1, Math.min(20, parseInt(participants) || 1))
+    let finalDate = booking_date
+    let finalTime = booking_time || '09:00'
+
+    // Handle Schedule
+    if (schedule_id) {
+      const schedRes = await client.query(
+        'SELECT * FROM course_schedules WHERE id = $1 AND course_id = $2',
+        [schedule_id, course_id]
+      )
+      if (schedRes.rows.length === 0) return res.status(404).json({ error: 'Valt datum hittades inte' })
+
+      const sched = schedRes.rows[0]
+      if (sched.current_participants + participantCount > sched.max_participants) {
+        return res.status(400).json({ error: 'Tyvärr är det valt datumet fullbokat' })
+      }
+
+      finalDate = sched.start_date
+      finalTime = sched.start_time
+
+      // Update participant count
+      await client.query(
+        'UPDATE course_schedules SET current_participants = current_participants + $1 WHERE id = $2',
+        [participantCount, schedule_id]
+      )
     }
 
     // Validera e-post
@@ -61,24 +89,19 @@ router.post('/', async (req, res) => {
     }
 
     // Validera datum
-    if (isNaN(Date.parse(booking_date))) {
+    if (isNaN(Date.parse(finalDate))) {
       return res.status(400).json({ error: 'Ogiltigt datum' })
     }
-    if (new Date(booking_date) < new Date()) {
-      return res.status(400).json({ error: 'Bokningsdatum kan inte vara i det förflutna' })
-    }
 
-    // Sanitera strängar (trima whitespace, begränsa längd)
+    // Sanitera strängar
     const safe = (s, max = 200) => String(s || '').trim().slice(0, max)
     const sanitized = {
       first_name: safe(first_name, 100),
-      last_name:  safe(last_name, 100),
-      email:      safe(email, 200).toLowerCase(),
-      phone:      safe(phone, 50),
-      notes:      safe(notes, 1000),
+      last_name: safe(last_name, 100),
+      email: safe(email, 200).toLowerCase(),
+      phone: safe(phone, 50),
+      notes: safe(notes, 1000),
     }
-
-    const participantCount = Math.max(1, Math.min(20, parseInt(participants) || 1))
 
     // Fetch course price
     const courseResult = await client.query('SELECT price FROM courses WHERE id = $1 AND is_active = true', [course_id])
@@ -102,10 +125,10 @@ router.post('/', async (req, res) => {
     const bookingResult = await client.query(
       `INSERT INTO bookings
          (course_id, booking_date, booking_time, participants, total_price,
-          first_name, last_name, email, phone, notes, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed') RETURNING *`,
-      [course_id, booking_date, booking_time, participantCount, totalPrice,
-       sanitized.first_name, sanitized.last_name, sanitized.email, sanitized.phone, sanitized.notes]
+          first_name, last_name, email, phone, notes, status, schedule_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed', $11) RETURNING *`,
+      [course_id, finalDate, finalTime, participantCount, totalPrice,
+        sanitized.first_name, sanitized.last_name, sanitized.email, sanitized.phone, sanitized.notes, schedule_id]
     )
     const booking = bookingResult.rows[0]
 
@@ -133,7 +156,7 @@ router.post('/', async (req, res) => {
 router.put('/:id/status', authenticateAdmin, async (req, res) => {
   try {
     const { status } = req.body
-    const allowed = ['pending','confirmed','cancelled','completed']
+    const allowed = ['pending', 'confirmed', 'cancelled', 'completed']
     if (!allowed.includes(status)) {
       return res.status(400).json({ error: `Status måste vara: ${allowed.join(', ')}` })
     }
