@@ -9,7 +9,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "migrate": "node src/db/migrate.js",
-    "reset-password": "node -e \"import('./src/db/reset-password.js')\""
+    "reset-password": "node -e \"import('./src/db/reset-password.js')\"",
+    "test": "vitest run"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -26,6 +27,7 @@
     "stripe": "^14.9.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "vitest": "^1.0.4"
   }
 }
