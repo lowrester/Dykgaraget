@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react'
-import { useInvoicesStore, useBookingsStore, useUIStore } from '../../store/index.js'
+import { useInvoicesStore, useBookingsStore, useCoursesStore, useEquipmentStore, useUIStore } from '../../store/index.js'
 import { AdminLayout, Card, Button, Badge } from '../../components/common/index.jsx'
 
 export default function ManageInvoices() {
+  const { invoices, fetch, create, markPaid, sendEmail, createManual, previewInvoice, archiveInvoice, downloadPdf, loading } = useInvoicesStore()
+  const { bookings, fetch: fetchBookings } = useBookingsStore()
   const { courses, fetch: fetchCourses } = useCoursesStore()
   const { equipment, fetch: fetchEquipment } = useEquipmentStore()
   const { addToast, ask } = useUIStore()
+
   const [working, setWorking] = useState({})
   const [showArchived, setShowArchived] = useState(false)
   const [showManualModal, setShowManualModal] = useState(false)

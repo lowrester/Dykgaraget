@@ -134,6 +134,7 @@ export default function App() {
         <Route path="/admin/installningar" element={<ProtectedRoute><FeatureSettings /></ProtectedRoute>} />
         <Route path="/admin/innehall" element={<ProtectedRoute><ManageContent /></ProtectedRoute>} />
         <Route path="/admin/kunder" element={<ProtectedRoute><ManageCustomers /></ProtectedRoute>} />
+        <Route path="/admin/anvandare" element={<ProtectedRoute><ManageUsers /></ProtectedRoute>} />
 
         {/* Stripe redirect-sidor */}
         <Route path="/betalning/bekraftad" element={<PublicLayout><PaymentSuccess /></PublicLayout>} />
