@@ -142,6 +142,23 @@ else
 fi
 
 # ============================================================
+# STEG 4.5 – Git-konfiguration (SSH)
+# ============================================================
+step "4.5/9 Git-konfiguration (SSH)"
+cd "$APP_DIR"
+if [ ! -d .git ]; then
+  info "Initierar git-repo..."
+  git init -q
+  git remote add origin git@github.com:lowrester/Dykgaraget.git
+else
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+  if [[ "$CURRENT_REMOTE" == "https://github.com/lowrester/Dykgaraget.git" ]]; then
+    info "HTTPS-remote upptäckt, byter till SSH för privat repo-stöd..."
+    git remote set-url origin git@github.com:lowrester/Dykgaraget.git
+  fi
+fi
+
+# ============================================================
 # STEG 5 – Backend
 # ============================================================
 step "5/9  Backend"

@@ -130,6 +130,21 @@ else
   mkdir -p $APP_DIR
 fi
 
+# ========== STEP 4.5: Git Configuration (SSH) ==========
+step "4.5/8 Configuring Git for private repository (SSH)..."
+cd $APP_DIR
+if [ ! -d .git ]; then
+  info "Initializing git repository..."
+  git init -q
+  git remote add origin git@github.com:lowrester/Dykgaraget.git
+else
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+  if [[ "$CURRENT_REMOTE" == "https://github.com/lowrester/Dykgaraget.git" ]]; then
+    info "Detected HTTPS remote, switching to SSH for private repo support..."
+    git remote set-url origin git@github.com:lowrester/Dykgaraget.git
+  fi
+fi
+
 # ========== STEP 5: Deploy Backend ==========
 step "5/8 Deploying backend..."
 
