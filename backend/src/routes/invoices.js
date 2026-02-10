@@ -54,23 +54,28 @@ router.post('/', authenticateAdmin, async (req, res) => {
     )
     const termsDays = parseInt(termsRes.rows[0]?.value || '30')
 
-    const subtotal    = parseFloat(booking.total_price) / 1.25
-    const vatAmount   = parseFloat(booking.total_price) - subtotal
+    const vatRes = await pool.query(
+      "SELECT value FROM settings WHERE key = 'invoice_vat_rate'"
+    )
+    const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
+
+    const subtotal = parseFloat(booking.total_price) / (1 + vatRate)
+    const vatAmount = parseFloat(booking.total_price) - subtotal
     const totalAmount = parseFloat(booking.total_price)
-    const dueDate     = new Date()
+    const dueDate = new Date()
     dueDate.setDate(dueDate.getDate() + termsDays)
 
-    const invoiceNumber = `${prefix}-${new Date().getFullYear()}-${String(await nextSeq(pool)).padStart(4,'0')}`
+    const invoiceNumber = `${prefix}-${new Date().getFullYear()}-${String(await nextSeq(pool)).padStart(4, '0')}`
 
     const result = await pool.query(
       `INSERT INTO invoices
          (booking_id, invoice_number, buyer_name, buyer_email,
           subtotal, vat_rate, vat_amount, total_amount, due_date, status)
-       VALUES ($1,$2,$3,$4,$5,0.25,$6,$7,$8,'unpaid') RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid') RETURNING *`,
       [booking_id, invoiceNumber,
-       `${booking.first_name} ${booking.last_name}`, booking.email,
-       subtotal.toFixed(2), vatAmount.toFixed(2), totalAmount.toFixed(2),
-       dueDate.toISOString().split('T')[0]]
+        `${booking.first_name} ${booking.last_name}`, booking.email,
+        subtotal.toFixed(2), vatRate, vatAmount.toFixed(2), totalAmount.toFixed(2),
+        dueDate.toISOString().split('T')[0]]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -108,7 +113,7 @@ router.post('/:id/email', authenticateAdmin, async (req, res) => {
     const invoice = await getInvoice(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Faktura hittades inte' })
 
-    const company  = await getCompanySettings()
+    const company = await getCompanySettings()
     const filepath = await generatePDF(invoice, company)
 
     await sendEmail({
@@ -188,22 +193,22 @@ async function generatePDF(invoice, company) {
   doc.fontSize(22).font('Helvetica-Bold').text(company.name || 'Dykgaraget AB', 50, 50)
   doc.fontSize(9).font('Helvetica')
   let y = 78
-  if (company.address)     { doc.text(company.address,     50, y); y += 14 }
-  if (company.org_number)  { doc.text(`Org.nr: ${company.org_number}`,  50, y); y += 14 }
-  if (company.vat_number)  { doc.text(`VAT: ${company.vat_number}`,     50, y); y += 14 }
-  if (company.email)       { doc.text(`E-post: ${company.email}`,       50, y); y += 14 }
-  if (company.phone)       { doc.text(`Tel: ${company.phone}`,          50, y) }
+  if (company.address) { doc.text(company.address, 50, y); y += 14 }
+  if (company.org_number) { doc.text(`Org.nr: ${company.org_number}`, 50, y); y += 14 }
+  if (company.vat_number) { doc.text(`VAT: ${company.vat_number}`, 50, y); y += 14 }
+  if (company.email) { doc.text(`E-post: ${company.email}`, 50, y); y += 14 }
+  if (company.phone) { doc.text(`Tel: ${company.phone}`, 50, y) }
 
   // ── Invoice title (right) ───────────────────────────────────
   doc.fontSize(28).font('Helvetica-Bold').fillColor('#0066CC').text('FAKTURA', 350, 50, { align: 'right' })
   doc.fillColor('#000000').fontSize(9).font('Helvetica')
-  doc.text(`Nr: ${invoice.invoice_number}`,                                              350, 90, { align: 'right' })
-  doc.text(`Datum: ${new Date(invoice.invoice_date).toLocaleDateString('sv-SE')}`,       350, 104, { align: 'right' })
-  doc.text(`Förfaller: ${new Date(invoice.due_date).toLocaleDateString('sv-SE')}`,       350, 118, { align: 'right' })
+  doc.text(`Nr: ${invoice.invoice_number}`, 350, 90, { align: 'right' })
+  doc.text(`Datum: ${new Date(invoice.invoice_date).toLocaleDateString('sv-SE')}`, 350, 104, { align: 'right' })
+  doc.text(`Förfaller: ${new Date(invoice.due_date).toLocaleDateString('sv-SE')}`, 350, 118, { align: 'right' })
   const statusLabel = invoice.status === 'paid' ? '✓ BETALD' : 'OBETALD'
   doc.fontSize(11).font('Helvetica-Bold')
-     .fillColor(invoice.status === 'paid' ? '#2E7D32' : '#DC2626')
-     .text(statusLabel, 350, 136, { align: 'right' })
+    .fillColor(invoice.status === 'paid' ? '#2E7D32' : '#DC2626')
+    .text(statusLabel, 350, 136, { align: 'right' })
   doc.fillColor('#000000')
 
   // ── Divider ─────────────────────────────────────────────────
@@ -212,24 +217,24 @@ async function generatePDF(invoice, company) {
   // ── Buyer ───────────────────────────────────────────────────
   doc.fontSize(9).font('Helvetica-Bold').text('KUND', 50, 180)
   doc.font('Helvetica')
-  doc.text(invoice.buyer_name    || '', 50, 194)
+  doc.text(invoice.buyer_name || '', 50, 194)
   doc.text(invoice.buyer_address || '', 50, 208)
-  doc.text(invoice.buyer_email   || '', 50, 222)
+  doc.text(invoice.buyer_email || '', 50, 222)
 
   // ── Line items table ─────────────────────────────────────────
   const tableTop = 265
   doc.fontSize(9).font('Helvetica-Bold')
   doc.rect(50, tableTop - 4, 495, 18).fill('#0066CC')
   doc.fillColor('#FFFFFF')
-  doc.text('Beskrivning',     55, tableTop)
-  doc.text('Ant.',           370, tableTop)
-  doc.text('À-pris',         410, tableTop)
-  doc.text('Belopp',         475, tableTop)
+  doc.text('Beskrivning', 55, tableTop)
+  doc.text('Ant.', 370, tableTop)
+  doc.text('À-pris', 410, tableTop)
+  doc.text('Belopp', 475, tableTop)
   doc.fillColor('#000000').font('Helvetica')
 
   const rowY = tableTop + 24
   doc.text('Dykkurs / bokning', 55, rowY)
-  doc.text('1',                 370, rowY)
+  doc.text('1', 370, rowY)
   doc.text(`${parseFloat(invoice.subtotal).toLocaleString('sv-SE')} kr`, 410, rowY)
   doc.text(`${parseFloat(invoice.subtotal).toLocaleString('sv-SE')} kr`, 475, rowY)
   doc.moveTo(50, rowY + 18).lineTo(545, rowY + 18).lineWidth(0.5).strokeColor('#E5E7EB').stroke()
@@ -237,14 +242,14 @@ async function generatePDF(invoice, company) {
   // ── Totals ───────────────────────────────────────────────────
   const totY = rowY + 35
   doc.fontSize(9).font('Helvetica')
-  doc.text('Delsumma (exkl. moms):',   340, totY)
+  doc.text('Delsumma (exkl. moms):', 340, totY)
   doc.text(`${parseFloat(invoice.subtotal).toLocaleString('sv-SE')} kr`, 475, totY)
   doc.text(`Moms (${(invoice.vat_rate * 100).toFixed(0)}%):`, 340, totY + 16)
   doc.text(`${parseFloat(invoice.vat_amount).toLocaleString('sv-SE')} kr`, 475, totY + 16)
 
   doc.rect(335, totY + 34, 210, 22).fill('#F5F7FA')
   doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000')
-  doc.text('TOTALT ATT BETALA:',       340, totY + 38)
+  doc.text('TOTALT ATT BETALA:', 340, totY + 38)
   doc.text(`${parseFloat(invoice.total_amount).toLocaleString('sv-SE')} kr`, 475, totY + 38)
 
   // ── Payment info ─────────────────────────────────────────────
@@ -253,12 +258,16 @@ async function generatePDF(invoice, company) {
   doc.moveTo(50, payY + 14).lineTo(545, payY + 14).lineWidth(0.5).strokeColor('#E5E7EB').stroke()
   doc.font('Helvetica')
   doc.text(`Bankkontonummer: ${company.bank || ''}`, 50, payY + 22)
-  doc.text(`Referens: ${invoice.invoice_number}`,    50, payY + 36)
-  doc.text(`Betalningsvillkor: 30 dagar netto`,      50, payY + 50)
+  doc.text(`Referens: ${invoice.invoice_number}`, 50, payY + 36)
+  doc.text(`Betalningsvillkor: 30 dagar netto`, 50, payY + 50)
 
   // ── Footer ───────────────────────────────────────────────────
+  let footerText = `${company.name || 'Dykgaraget AB'}  •  ${company.address || ''}  •  ${company.email || ''}`
+  if (company.f_skatt === 'true') {
+    footerText += '  •  Godkänd för F-skatt'
+  }
   doc.fontSize(8).fillColor('#9CA3AF')
-     .text(`${company.name || 'Dykgaraget AB'}  •  ${company.address || ''}  •  ${company.email || ''}`, 50, 780, { align: 'center' })
+    .text(footerText, 50, 780, { align: 'center' })
 
   doc.end()
 

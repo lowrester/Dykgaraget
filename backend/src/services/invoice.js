@@ -8,9 +8,9 @@
  */
 
 import PDFDocument from 'pdfkit'
-import fs          from 'fs'
-import path        from 'path'
-import { pool }    from '../db/connection.js'
+import fs from 'fs'
+import path from 'path'
+import { pool } from '../db/connection.js'
 import { sendEmail } from './email.js'
 
 /**
@@ -40,44 +40,44 @@ export async function generateInvoicePDF(invoiceId) {
   }, {})
 
   // Skapa PDF
-  const doc      = new PDFDocument({ margin: 50 })
+  const doc = new PDFDocument({ margin: 50 })
   const filename = `invoice_${inv.invoice_number}.pdf`
-  const dir      = path.resolve(process.env.UPLOAD_DIR || './uploads', 'invoices')
+  const dir = path.resolve(process.env.UPLOAD_DIR || './uploads', 'invoices')
   fs.mkdirSync(dir, { recursive: true })
   const filepath = path.join(dir, filename)
-  const stream   = fs.createWriteStream(filepath)
+  const stream = fs.createWriteStream(filepath)
   doc.pipe(stream)
 
   // ── Avsändare (vänster) ─────────────────────────────────
   doc.fontSize(18).font('Helvetica-Bold').text(co.name || 'Dykgaraget AB', 50, 50)
   doc.fontSize(9).font('Helvetica')
-     .text(co.address || '', 50, 80)
-     .text(`Org.nr: ${co.org_number || ''}`, 50, 93)
-     .text(`Telefon: ${co.phone || ''}`, 50, 106)
-     .text(`E-post: ${co.email || ''}`, 50, 119)
+    .text(co.address || '', 50, 80)
+    .text(`Org.nr: ${co.org_number || ''}`, 50, 93)
+    .text(`Telefon: ${co.phone || ''}`, 50, 106)
+    .text(`E-post: ${co.email || ''}`, 50, 119)
 
   // ── Fakturarubrik (höger) ────────────────────────────────
   doc.fontSize(26).font('Helvetica-Bold').fillColor('#0066CC').text('FAKTURA', 350, 50, { align: 'right' })
   doc.fontSize(9).font('Helvetica').fillColor('#000000')
-     .text(`Nr: ${inv.invoice_number}`, 350, 90, { align: 'right' })
-     .text(`Datum: ${fmtDate(inv.invoice_date)}`, 350, 103, { align: 'right' })
-     .text(`Förfaller: ${fmtDate(inv.due_date)}`, 350, 116, { align: 'right' })
+    .text(`Nr: ${inv.invoice_number}`, 350, 90, { align: 'right' })
+    .text(`Datum: ${fmtDate(inv.invoice_date)}`, 350, 103, { align: 'right' })
+    .text(`Förfaller: ${fmtDate(inv.due_date)}`, 350, 116, { align: 'right' })
 
   // ── Mottagare ────────────────────────────────────────────
   doc.fontSize(10).font('Helvetica-Bold').text('Faktureras till:', 50, 175)
   doc.font('Helvetica').fontSize(10)
-  if (inv.buyer_name)    doc.text(inv.buyer_name, 50, 193)
+  if (inv.buyer_name) doc.text(inv.buyer_name, 50, 193)
   if (inv.buyer_address) doc.text(inv.buyer_address, 50, 206)
-  if (inv.buyer_email)   doc.text(inv.buyer_email, 50, 219)
+  if (inv.buyer_email) doc.text(inv.buyer_email, 50, 219)
 
   // ── Tabellhuvud ──────────────────────────────────────────
   const tableTop = 280
   doc.moveTo(50, tableTop - 5).lineTo(545, tableTop - 5).strokeColor('#DDDDDD').stroke()
   doc.font('Helvetica-Bold').fontSize(9)
-     .text('Beskrivning',  50,  tableTop)
-     .text('Antal',       360,  tableTop, { width: 50,  align: 'right' })
-     .text('Á-pris',      415,  tableTop, { width: 60,  align: 'right' })
-     .text('Summa',       480,  tableTop, { width: 65,  align: 'right' })
+    .text('Beskrivning', 50, tableTop)
+    .text('Antal', 360, tableTop, { width: 50, align: 'right' })
+    .text('Á-pris', 415, tableTop, { width: 60, align: 'right' })
+    .text('Summa', 480, tableTop, { width: 65, align: 'right' })
   doc.moveTo(50, tableTop + 15).lineTo(545, tableTop + 15).strokeColor('#DDDDDD').stroke()
 
   // ── Rader ────────────────────────────────────────────────
@@ -93,10 +93,10 @@ export async function generateInvoicePDF(invoiceId) {
 
   doc.font('Helvetica').fontSize(9)
   rows.forEach(item => {
-    doc.text(item.description,             50, y, { width: 300 })
-       .text(String(item.quantity),       360, y, { width:  50, align: 'right' })
-       .text(fmtSEK(item.unit_price),     415, y, { width:  60, align: 'right' })
-       .text(fmtSEK(item.total),          480, y, { width:  65, align: 'right' })
+    doc.text(item.description, 50, y, { width: 300 })
+      .text(String(item.quantity), 360, y, { width: 50, align: 'right' })
+      .text(fmtSEK(item.unit_price), 415, y, { width: 60, align: 'right' })
+      .text(fmtSEK(item.total), 480, y, { width: 65, align: 'right' })
     y += 18
   })
 
@@ -105,32 +105,36 @@ export async function generateInvoicePDF(invoiceId) {
   // ── Summering ────────────────────────────────────────────
   y += 15
   doc.font('Helvetica').fontSize(9)
-     .text('Netto:',          380, y, { width: 95, align: 'right' })
-     .text(fmtSEK(inv.subtotal), 480, y, { width: 65, align: 'right' })
+    .text('Netto:', 380, y, { width: 95, align: 'right' })
+    .text(fmtSEK(inv.subtotal), 480, y, { width: 65, align: 'right' })
   y += 14
   const vatLabel = `Moms ${Math.round((inv.vat_rate || 0.25) * 100)} %:`
-  doc.text(vatLabel,          380, y, { width: 95, align: 'right' })
-     .text(fmtSEK(inv.vat_amount), 480, y, { width: 65, align: 'right' })
+  doc.text(vatLabel, 380, y, { width: 95, align: 'right' })
+    .text(fmtSEK(inv.vat_amount), 480, y, { width: 65, align: 'right' })
   y += 14
 
   doc.font('Helvetica-Bold').fontSize(11)
   doc.rect(370, y - 3, 175, 18).fillAndStroke('#0066CC', '#0066CC')
   doc.fillColor('#FFFFFF')
-     .text('Att betala:',          380, y, { width: 95, align: 'right' })
-     .text(fmtSEK(inv.total_amount), 480, y, { width: 65, align: 'right' })
+    .text('Att betala:', 380, y, { width: 95, align: 'right' })
+    .text(fmtSEK(inv.total_amount), 480, y, { width: 65, align: 'right' })
   doc.fillColor('#000000')
 
   // ── Betalningsinfo ───────────────────────────────────────
   y += 40
   doc.font('Helvetica-Bold').fontSize(9).text('Betalningsinformation:', 50, y)
   doc.font('Helvetica').fontSize(9)
-     .text(`Bankgiro / konto: ${co.bank_account || '–'}`, 50, y + 14)
-     .text(`Referens: ${inv.invoice_number}`, 50, y + 27)
-     .text(`Betalningsvillkor: ${inv.terms_days || 30} dagar netto`, 50, y + 40)
+    .text(`Bankgiro / konto: ${co.bank_account || '–'}`, 50, y + 14)
+    .text(`Referens: ${inv.invoice_number}`, 50, y + 27)
+    .text(`Betalningsvillkor: ${inv.terms_days || 30} dagar netto`, 50, y + 40)
 
   // ── Sidfot ───────────────────────────────────────────────
+  let footerText = 'Tack för din beställning!'
+  if (co.f_skatt === 'true') {
+    footerText = `Godkänd för F-skatt  •  ${footerText}`
+  }
   doc.fontSize(8).fillColor('#888888')
-     .text('Tack för din beställning!', 50, 750, { align: 'center', width: 495 })
+    .text(footerText, 50, 750, { align: 'center', width: 495 })
 
   doc.end()
 
@@ -158,7 +162,7 @@ export async function emailInvoice(invoiceId) {
   const pdfPath = await generateInvoicePDF(invoiceId)
 
   await sendEmail({
-    to:      inv.customer_email,
+    to: inv.customer_email,
     subject: `Faktura ${inv.invoice_number} från Dykgaraget`,
     html: `
       <p>Hej ${inv.first_name || ''},</p>
@@ -177,7 +181,7 @@ export async function emailInvoice(invoiceId) {
     `,
     attachments: [{
       filename: path.basename(pdfPath),
-      path:     pdfPath,
+      path: pdfPath,
     }],
   })
 

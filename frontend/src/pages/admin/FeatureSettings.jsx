@@ -16,10 +16,11 @@ const COMPANY_LABELS = {
   company_phone: 'Telefon',
   company_email: 'E-post',
   company_bank_account: 'Bankgiro / konto',
+  company_f_skatt: 'Godkänd för F-skatt',
 }
 
 const INVOICE_LABELS = {
-  invoice_vat_rate: 'Momssats',
+  invoice_vat_rate: 'Momssats (t.ex. 0.25)',
   invoice_terms_days: 'Betalningsvillkor (dagar)',
   invoice_prefix: 'Fakturanummer-prefix',
 }
