@@ -1,5 +1,5 @@
 import { pool } from './connection.js'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import dotenv from 'dotenv'
 dotenv.config()
 

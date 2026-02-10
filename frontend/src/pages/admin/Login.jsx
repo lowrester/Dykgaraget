@@ -34,7 +34,6 @@ export default function AdminLogin() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required autoFocus
-            placeholder="admin"
           />
           <Input
             label="Lösenord"
@@ -44,22 +43,22 @@ export default function AdminLogin() {
             required
             placeholder="••••••••"
           />
-          <Button type="submit" loading={loading} className="btn-full" style={{marginTop:'1.25rem'}}>
+          <Button type="submit" loading={loading} className="btn-full" style={{ marginTop: '1.25rem' }}>
             Logga in
           </Button>
         </form>
 
-        <div style={{textAlign:'center', marginTop:'1.25rem'}}>
-          <a href="/" style={{fontSize:'0.82rem', color:'var(--gray-400)'}}>← Tillbaka till webbplatsen</a>
+        <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+          <a href="/" style={{ fontSize: '0.82rem', color: 'var(--gray-400)' }}>← Tillbaka till webbplatsen</a>
         </div>
 
-        <details style={{marginTop:'1.25rem', borderTop:'1px solid var(--gray-100)', paddingTop:'1rem'}}>
-          <summary style={{fontSize:'0.78rem', color:'var(--gray-400)', cursor:'pointer', userSelect:'none'}}>
+        <details style={{ marginTop: '1.25rem', borderTop: '1px solid var(--gray-100)', paddingTop: '1rem' }}>
+          <summary style={{ fontSize: '0.78rem', color: 'var(--gray-400)', cursor: 'pointer', userSelect: 'none' }}>
             Glömt lösenordet?
           </summary>
-          <div style={{marginTop:'0.75rem', padding:'0.75rem', background:'var(--gray-50)', borderRadius:'var(--radius)', fontSize:'0.8rem', color:'var(--gray-600)', lineHeight:1.6}}>
+          <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: 'var(--radius)', fontSize: '0.8rem', color: 'var(--gray-600)', lineHeight: 1.6 }}>
             <strong>Återställ via terminalen:</strong><br />
-            <code style={{display:'block', marginTop:'0.4rem', padding:'0.4rem 0.6rem', background:'var(--gray-100)', borderRadius:4, fontFamily:'monospace', fontSize:'0.75rem', wordBreak:'break-all'}}>
+            <code style={{ display: 'block', marginTop: '0.4rem', padding: '0.4rem 0.6rem', background: 'var(--gray-100)', borderRadius: 4, fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
               cd /var/www/dykgaraget/backend<br />
               ADMIN_PASSWORD=NyttLösenord node src/db/reset-password.js
             </code>

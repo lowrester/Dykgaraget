@@ -1,5 +1,5 @@
 import express from 'express'
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { pool } from '../db/connection.js'
 import { authenticate } from '../middleware/auth.js'
@@ -34,12 +34,12 @@ router.post('/login', async (req, res) => {
     res.json({
       token,
       user: {
-        id:        user.id,
-        username:  user.username,
-        email:     user.email,
+        id: user.id,
+        username: user.username,
+        email: user.email,
         firstName: user.first_name,
-        lastName:  user.last_name,
-        role:      user.role,
+        lastName: user.last_name,
+        role: user.role,
       }
     })
   } catch (err) {

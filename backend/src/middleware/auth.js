@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 import { pool } from '../db/connection.js'
 
 export const authenticate = async (req, res, next) => {
@@ -20,14 +21,23 @@ export const authenticate = async (req, res, next) => {
   }
 }
 
-export const authenticateAdmin = (req, res, next) => {
-  authenticate(req, res, (err) => {
-    if (err) return next(err)
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Admin access required' })
+export const authenticateAdmin = async (req, res, next) => {
+  try {
+    // Använd den befintliga authenticate-middlewaren
+    await authenticate(req, res, () => {
+      // Om authenticate lyckades finns req.user
+      if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' })
+      }
+      next()
+    })
+  } catch (err) {
+    // Om authenticate redan skickat respons kommer vi hit om den kastade fel
+    // men eftersom den har egen try-catch så händer det sällan
+    if (!res.headersSent) {
+      next(err)
     }
-    next()
-  })
+  }
 }
 
 export const checkFeature = (featureName) => async (req, res, next) => {
