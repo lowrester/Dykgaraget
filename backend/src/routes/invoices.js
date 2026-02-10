@@ -36,27 +36,15 @@ router.post('/', authenticateAdmin, async (req, res) => {
     const { booking_id } = req.body
     if (!booking_id) return res.status(400).json({ error: 'booking_id krävs' })
 
-    // Fetch booking
-    const bookingRes = await pool.query(
-      'SELECT * FROM bookings WHERE id = $1', [booking_id]
-    )
+    const bookingRes = await pool.query('SELECT * FROM bookings WHERE id = $1', [booking_id])
     if (bookingRes.rows.length === 0) return res.status(404).json({ error: 'Bokning hittades inte' })
     const booking = bookingRes.rows[0]
 
-    // Invoice prefix from settings
-    const prefixRes = await pool.query(
-      "SELECT value FROM settings WHERE key = 'invoice_prefix'"
-    )
+    const prefixRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
     const prefix = prefixRes.rows[0]?.value || 'DYK'
-
-    const termsRes = await pool.query(
-      "SELECT value FROM settings WHERE key = 'invoice_terms_days'"
-    )
+    const termsRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_terms_days'")
     const termsDays = parseInt(termsRes.rows[0]?.value || '30')
-
-    const vatRes = await pool.query(
-      "SELECT value FROM settings WHERE key = 'invoice_vat_rate'"
-    )
+    const vatRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_vat_rate'")
     const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
 
     const subtotal = parseFloat(booking.total_price) / (1 + vatRate)
@@ -70,14 +58,135 @@ router.post('/', authenticateAdmin, async (req, res) => {
     const result = await pool.query(
       `INSERT INTO invoices
          (booking_id, invoice_number, buyer_name, buyer_email,
-          subtotal, vat_rate, vat_amount, total_amount, due_date, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid') RETURNING *`,
-      [booking_id, invoiceNumber,
-        `${booking.first_name} ${booking.last_name}`, booking.email,
+          subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid', $10) RETURNING *`,
+      [booking_id, invoiceNumber, `${booking.first_name} ${booking.last_name}`, booking.email,
         subtotal.toFixed(2), vatRate, vatAmount.toFixed(2), totalAmount.toFixed(2),
-        dueDate.toISOString().split('T')[0]]
+        dueDate.toISOString().split('T')[0], termsDays]
     )
     res.status(201).json(result.rows[0])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/invoices/manual  – create custom invoice
+router.post('/manual', authenticateAdmin, async (req, res) => {
+  const client = await pool.connect()
+  try {
+    const { buyer_name, buyer_email, buyer_address, items, terms_days } = req.body
+    if (!buyer_name || !buyer_email || !items || !items.length) {
+      return res.status(400).json({ error: 'Kunduppgifter och rader krävs' })
+    }
+
+    await client.query('BEGIN')
+
+    const prefixRes = await client.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
+    const prefix = prefixRes.rows[0]?.value || 'DYK'
+    const vatRes = await client.query("SELECT value FROM settings WHERE key = 'invoice_vat_rate'")
+    const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
+    const finalTermsDays = parseInt(terms_days || '30')
+
+    let subtotal = 0
+    items.forEach(item => {
+      subtotal += parseFloat(item.unit_price) * parseFloat(item.quantity)
+    })
+
+    const vatAmount = subtotal * vatRate
+    const totalAmount = subtotal + vatAmount
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + finalTermsDays)
+
+    const invoiceNumber = `${prefix}-${new Date().getFullYear()}-${String(await nextSeq(client)).padStart(4, '0')}`
+
+    const invRes = await client.query(
+      `INSERT INTO invoices
+         (invoice_number, buyer_name, buyer_email, buyer_address,
+          subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid', $10) RETURNING *`,
+      [invoiceNumber, buyer_name, buyer_email, buyer_address,
+        subtotal.toFixed(2), vatRate, vatAmount.toFixed(2), totalAmount.toFixed(2),
+        dueDate.toISOString().split('T')[0], finalTermsDays]
+    )
+    const invoice = invRes.rows[0]
+
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [invoice.id, item.description, item.quantity, item.unit_price, (item.quantity * item.unit_price).toFixed(2)]
+      )
+    }
+
+    await client.query('COMMIT')
+    res.status(201).json(invoice)
+  } catch (err) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ error: err.message })
+  } finally {
+    client.release()
+  }
+})
+
+// POST /api/invoices/preview – generate preview PDF (unsaved)
+router.post('/preview', authenticateAdmin, async (req, res) => {
+  try {
+    const { buyer_name, buyer_email, buyer_address, items, terms_days } = req.body
+
+    const prefixRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
+    const prefix = prefixRes.rows[0]?.value || 'DYK'
+    const vatRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_vat_rate'")
+    const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
+    const finalTermsDays = parseInt(terms_days || '30')
+
+    let subtotal = 0
+    items.forEach(item => {
+      subtotal += parseFloat(item.unit_price) * parseFloat(item.quantity)
+    })
+
+    const vatAmount = subtotal * vatRate
+    const totalAmount = subtotal + vatAmount
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + finalTermsDays)
+
+    // Mock invoice object for PDF generator
+    const mockInvoice = {
+      invoice_number: `${prefix}-PREVIEW`,
+      invoice_date: new Date(),
+      due_date: dueDate,
+      buyer_name,
+      buyer_email,
+      buyer_address,
+      subtotal,
+      vat_rate: vatRate,
+      vat_amount: vatAmount,
+      total_amount: totalAmount,
+      status: 'unpaid',
+      items: items.map(i => ({ ...i, total: i.quantity * i.unit_price }))
+    }
+
+    const company = await getCompanySettings()
+    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+
+    res.setHeader('Content-Type', 'application/pdf')
+    doc.pipe(res)
+    await generatePDFBody(doc, mockInvoice, company)
+    doc.end()
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// PATCH /api/invoices/:id/archive – toggle archive status
+router.patch('/:id/archive', authenticateAdmin, async (req, res) => {
+  try {
+    const { is_archived } = req.body
+    const result = await pool.query(
+      'UPDATE invoices SET is_archived = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [is_archived, req.params.id]
+    )
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Faktura hittades inte' })
+    res.json(result.rows[0])
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -89,8 +198,25 @@ router.get('/:id/pdf', authenticateAdmin, async (req, res) => {
     const invoice = await getInvoice(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Faktura hittades inte' })
 
+    // Fetch items if they exist
+    const itemsRes = await pool.query('SELECT * FROM invoice_items WHERE invoice_id = $1', [invoice.id])
+    invoice.items = itemsRes.rows
+
     const company = await getCompanySettings()
-    const filepath = await generatePDF(invoice, company)
+    const dir = path.join(process.env.UPLOAD_DIR || './uploads', 'invoices')
+    fs.mkdirSync(dir, { recursive: true })
+    const filepath = path.join(dir, `${invoice.invoice_number}.pdf`)
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+    const stream = fs.createWriteStream(filepath)
+    doc.pipe(stream)
+    await generatePDFBody(doc, invoice, company)
+    doc.end()
+
+    await new Promise((resolve, reject) => {
+      stream.on('finish', resolve)
+      stream.on('error', reject)
+    })
 
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoice_number}.pdf"`)
@@ -103,9 +229,7 @@ router.get('/:id/pdf', authenticateAdmin, async (req, res) => {
 // POST /api/invoices/:id/email  – send PDF via email
 router.post('/:id/email', authenticateAdmin, async (req, res) => {
   try {
-    const featureCheck = await pool.query(
-      "SELECT value FROM settings WHERE key = 'feature_email'"
-    )
+    const featureCheck = await pool.query("SELECT value FROM settings WHERE key = 'feature_email'")
     if (featureCheck.rows[0]?.value !== 'true') {
       return res.status(403).json({ error: 'Email-modulen är inte aktiverad' })
     }
@@ -113,21 +237,29 @@ router.post('/:id/email', authenticateAdmin, async (req, res) => {
     const invoice = await getInvoice(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Faktura hittades inte' })
 
+    // Fetch items
+    const itemsRes = await pool.query('SELECT * FROM invoice_items WHERE invoice_id = $1', [invoice.id])
+    invoice.items = itemsRes.rows
+
     const company = await getCompanySettings()
-    const filepath = await generatePDF(invoice, company)
+    const doc = new PDFDocument({ margin: 50, size: 'A4' })
+    const dir = path.join(process.env.UPLOAD_DIR || './uploads', 'invoices')
+    fs.mkdirSync(dir, { recursive: true })
+    const filepath = path.join(dir, `${invoice.invoice_number}.pdf`)
+    const stream = fs.createWriteStream(filepath)
+    doc.pipe(stream)
+    await generatePDFBody(doc, invoice, company)
+    doc.end()
+
+    await new Promise((res, rej) => { stream.on('finish', res); stream.on('error', rej) })
 
     await sendEmail({
       to: invoice.buyer_email,
       subject: `Faktura ${invoice.invoice_number} från ${company.name}`,
       html: `
         <h2>Hej ${invoice.buyer_name}!</h2>
-        <p>Tack för din bokning hos ${company.name}.</p>
         <p>Bifogad finner du faktura <strong>${invoice.invoice_number}</strong>.</p>
-        <table style="border-collapse:collapse;margin:1em 0">
-          <tr><td style="padding:4px 12px 4px 0"><strong>Fakturanummer:</strong></td><td>${invoice.invoice_number}</td></tr>
-          <tr><td style="padding:4px 12px 4px 0"><strong>Förfallodatum:</strong></td><td>${new Date(invoice.due_date).toLocaleDateString('sv-SE')}</td></tr>
-          <tr><td style="padding:4px 12px 4px 0"><strong>Totalt att betala:</strong></td><td><strong>${parseFloat(invoice.total_amount).toLocaleString('sv-SE')} kr</strong></td></tr>
-        </table>
+        <p>Totalt att betala: <strong>${parseFloat(invoice.total_amount).toLocaleString('sv-SE')} kr</strong></p>
         <p>Bankkontonummer: ${company.bank}</p>
         <p>Referens: ${invoice.invoice_number}</p>
         <br><p>Vänliga hälsningar,<br>${company.name}</p>
@@ -162,8 +294,8 @@ router.put('/:id/paid', authenticateAdmin, async (req, res) => {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-async function nextSeq(pool) {
-  const r = await pool.query("SELECT nextval('invoice_number_seq')")
+async function nextSeq(poolOrClient) {
+  const r = await poolOrClient.query("SELECT nextval('invoice_number_seq')")
   return r.rows[0].nextval
 }
 
@@ -180,15 +312,7 @@ async function getCompanySettings() {
   }, {})
 }
 
-async function generatePDF(invoice, company) {
-  const dir = path.join(process.env.UPLOAD_DIR || './uploads', 'invoices')
-  fs.mkdirSync(dir, { recursive: true })
-  const filepath = path.join(dir, `${invoice.invoice_number}.pdf`)
-
-  const doc = new PDFDocument({ margin: 50, size: 'A4' })
-  const stream = fs.createWriteStream(filepath)
-  doc.pipe(stream)
-
+async function generatePDFBody(doc, invoice, company) {
   // ── Header ──────────────────────────────────────────────────
   doc.fontSize(22).font('Helvetica-Bold').text(company.name || 'Dykgaraget AB', 50, 50)
   doc.fontSize(9).font('Helvetica')
@@ -232,15 +356,25 @@ async function generatePDF(invoice, company) {
   doc.text('Belopp', 475, tableTop)
   doc.fillColor('#000000').font('Helvetica')
 
-  const rowY = tableTop + 24
-  doc.text('Dykkurs / bokning', 55, rowY)
-  doc.text('1', 370, rowY)
-  doc.text(`${parseFloat(invoice.subtotal).toLocaleString('sv-SE')} kr`, 410, rowY)
-  doc.text(`${parseFloat(invoice.subtotal).toLocaleString('sv-SE')} kr`, 475, rowY)
-  doc.moveTo(50, rowY + 18).lineTo(545, rowY + 18).lineWidth(0.5).strokeColor('#E5E7EB').stroke()
+  let currentY = tableTop + 24
+  const items = invoice.items && invoice.items.length > 0
+    ? invoice.items
+    : [{ description: 'Dykkurs / bokning', quantity: 1, unit_price: invoice.subtotal, total: invoice.subtotal }]
+
+  items.forEach(item => {
+    doc.text(item.description, 55, currentY, { width: 300 })
+    doc.text(String(item.quantity), 370, currentY)
+    doc.text(`${parseFloat(item.unit_price).toLocaleString('sv-SE')} kr`, 410, currentY)
+    doc.text(`${parseFloat(item.total).toLocaleString('sv-SE')} kr`, 475, currentY)
+
+    currentY += 20
+    doc.moveTo(50, currentY - 2).lineTo(545, currentY - 2).lineWidth(0.5).strokeColor('#E5E7EB').stroke()
+  })
 
   // ── Totals ───────────────────────────────────────────────────
-  const totY = rowY + 35
+  let totY = currentY + 15
+  if (totY > 700) { doc.addPage(); totY = 50 }
+
   doc.fontSize(9).font('Helvetica')
   doc.text('Delsumma (exkl. moms):', 340, totY)
   doc.text(`${parseFloat(invoice.subtotal).toLocaleString('sv-SE')} kr`, 475, totY)
@@ -253,13 +387,15 @@ async function generatePDF(invoice, company) {
   doc.text(`${parseFloat(invoice.total_amount).toLocaleString('sv-SE')} kr`, 475, totY + 38)
 
   // ── Payment info ─────────────────────────────────────────────
-  const payY = totY + 90
+  let payY = totY + 90
+  if (payY > 650) { doc.addPage(); payY = 50 }
+
   doc.fontSize(9).font('Helvetica-Bold').text('BETALNINGSINFORMATION', 50, payY)
   doc.moveTo(50, payY + 14).lineTo(545, payY + 14).lineWidth(0.5).strokeColor('#E5E7EB').stroke()
   doc.font('Helvetica')
   doc.text(`Bankkontonummer: ${company.bank || ''}`, 50, payY + 22)
   doc.text(`Referens: ${invoice.invoice_number}`, 50, payY + 36)
-  doc.text(`Betalningsvillkor: 30 dagar netto`, 50, payY + 50)
+  doc.text(`Betalningsvillkor: ${invoice.terms_days || 30} dagar netto`, 50, payY + 50)
 
   // ── Footer ───────────────────────────────────────────────────
   let footerText = `${company.name || 'Dykgaraget AB'}  •  ${company.address || ''}  •  ${company.email || ''}`
@@ -268,13 +404,6 @@ async function generatePDF(invoice, company) {
   }
   doc.fontSize(8).fillColor('#9CA3AF')
     .text(footerText, 50, 780, { align: 'center' })
-
-  doc.end()
-
-  return new Promise((resolve, reject) => {
-    stream.on('finish', () => resolve(filepath))
-    stream.on('error', reject)
-  })
 }
 
 export default router

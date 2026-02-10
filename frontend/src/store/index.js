@@ -262,9 +262,24 @@ export const useInvoicesStore = create((set) => ({
     return await client.post(`/invoices/${id}/email`)
   },
 
-  downloadPdf: (id) => {
-    const base = import.meta.env.VITE_API_URL || '/api'
-    window.open(`${base}/invoices/${id}/pdf`, '_blank')
+  createManual: async (invoiceData) => {
+    const data = await client.post('/invoices/manual', invoiceData)
+    set((s) => ({ invoices: [data, ...s.invoices] }))
+    return data
+  },
+
+  archiveInvoice: async (id, isArchived) => {
+    const data = await client.patch(`/invoices/${id}/archive`, { is_archived: isArchived })
+    set((s) => ({ invoices: s.invoices.map((inv) => (inv.id === id ? data : inv)) }))
+    return data
+  },
+
+  previewInvoice: async (invoiceData) => {
+    // Generate a temporary link from the blob response
+    const response = await client.post('/invoices/preview', invoiceData, { responseType: 'blob' })
+    const file = new Blob([response.data || response], { type: 'application/pdf' })
+    const fileURL = URL.createObjectURL(file)
+    window.open(fileURL)
   },
 }))
 

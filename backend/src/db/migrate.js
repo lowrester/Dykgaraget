@@ -163,6 +163,7 @@ async function run() {
         pdf_generated  BOOLEAN       DEFAULT false,
         emailed_at     TIMESTAMP,
         paid_at        TIMESTAMP,
+        is_archived    BOOLEAN       DEFAULT false,
         created_at     TIMESTAMP     DEFAULT NOW(),
         updated_at     TIMESTAMP     DEFAULT NOW()
       )
@@ -188,6 +189,13 @@ async function run() {
           WHERE table_name='invoices' AND column_name='sent_at'
         ) THEN
           ALTER TABLE invoices ADD COLUMN sent_at TIMESTAMP;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='invoices' AND column_name='is_archived'
+        ) THEN
+          ALTER TABLE invoices ADD COLUMN is_archived BOOLEAN DEFAULT false;
         END IF;
       END $$;
     `)
