@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useCoursesStore } from '../../store/index.js'
-import { AdminLayout, Card, Modal, Button, Input, Alert, LevelBadge } from '../../components/common/index.jsx'
+import { useCoursesStore, useUIStore } from '../../store/index.js'
+import { AdminLayout, Card, Modal, Button, Input, LevelBadge } from '../../components/common/index.jsx'
 
 const EMPTY = { name: '', level: 'Nybörjare', duration: 3, price: '', description: '', prerequisites: '', included_materials: '', certification_agency: 'PADI', max_participants: 10, min_participants: 1, is_active: true }
 const LEVELS = ['Nybörjare', 'Fortsättning', 'Avancerad', 'Professionell']
 
 export default function ManageCourses() {
   const { courses, fetch, create, update, remove, loading, fetchSchedules, addSchedule, removeSchedule } = useCoursesStore()
+  const { addToast, ask } = useUIStore()
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
-  const [alert, setAlert] = useState(null)
   const [saving, setSaving] = useState(false)
   const [sortBy, setSortBy] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
@@ -51,7 +51,7 @@ export default function ManageCourses() {
       const data = await fetchSchedules(c.id)
       setSchedules(data)
     } catch (err) {
-      setAlert({ type: 'error', msg: 'Kunde inte ladda schema: ' + err.message })
+      addToast('Kunde inte ladda schema: ' + err.message, 'error')
     }
   }
 
@@ -61,18 +61,21 @@ export default function ManageCourses() {
       const resp = await addSchedule(schedCourse.id, schedForm)
       setSchedules(s => [...s, resp].sort((a, b) => a.start_date.localeCompare(b.start_date)))
       setSchedForm({ ...schedForm, start_date: '' })
+      addToast('Datum tillagt!')
     } catch (err) {
-      alert(err.message)
+      addToast(err.message, 'error')
     }
   }
 
   const handleRemoveSchedule = async (sid) => {
-    if (!window.confirm('Ta bort detta datum?')) return
+    const ok = await ask({ title: 'Ta bort datum?', message: 'Är du säker på att du vill ta bort detta schema-datum?', type: 'danger', confirmText: 'Ta bort' })
+    if (!ok) return
     try {
       await removeSchedule(schedCourse.id, sid)
       setSchedules(s => s.filter(i => i.id !== sid))
+      addToast('Datum borttaget')
     } catch (err) {
-      alert(err.message)
+      addToast(err.message, 'error')
     }
   }
 
@@ -96,7 +99,7 @@ export default function ManageCourses() {
       const payload = { ...form, price: parseFloat(form.price), duration: parseInt(form.duration), max_participants: parseInt(form.max_participants), min_participants: parseInt(form.min_participants) }
       if (editing) await update(editing.id, payload)
       else await create(payload)
-      setAlert({ type: 'success', msg: editing ? 'Kurs uppdaterad!' : 'Kurs skapad!' })
+      addToast(editing ? 'Kurs uppdaterad!' : 'Kurs skapad!')
       closeModal()
     } catch (err) {
       setErrors({ submit: err.message })
@@ -106,18 +109,18 @@ export default function ManageCourses() {
   }
 
   const handleDelete = async (course) => {
-    if (!window.confirm(`Ta bort "${course.name}"?`)) return
+    const ok = await ask({ title: 'Ta bort kurs?', message: `Är du säker på att du vill ta bort "${course.name}"? Detta går inte att ångra.`, type: 'danger', confirmText: 'Ta bort' })
+    if (!ok) return
     try {
       await remove(course.id)
-      setAlert({ type: 'success', msg: 'Kurs borttagen' })
+      addToast('Kurs borttagen')
     } catch (err) {
-      setAlert({ type: 'error', msg: err.message })
+      addToast(err.message, 'error')
     }
   }
 
   return (
     <AdminLayout title="Hantera kurser">
-      {alert && <Alert type={alert.type} onClose={() => setAlert(null)}>{alert.msg}</Alert>}
 
       <div className="page-actions">
         <Button onClick={openNew}>+ Ny kurs</Button>

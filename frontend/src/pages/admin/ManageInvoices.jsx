@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useInvoicesStore, useBookingsStore } from '../../store/index.js'
-import { AdminLayout, Card, Button, Alert, Badge } from '../../components/common/index.jsx'
+import { useInvoicesStore, useBookingsStore, useUIStore } from '../../store/index.js'
+import { AdminLayout, Card, Button, Badge } from '../../components/common/index.jsx'
 
 export default function ManageInvoices() {
   const { invoices, fetch, create, markPaid, sendEmail, downloadPdf, loading } = useInvoicesStore()
   const { bookings, fetch: fetchBookings } = useBookingsStore()
-  const [alert,    setAlert]    = useState(null)
-  const [working,  setWorking]  = useState({})
+  const { addToast, ask } = useUIStore()
+  const [working, setWorking] = useState({})
 
   useEffect(() => { fetch(); fetchBookings() }, [fetch, fetchBookings])
 
@@ -19,9 +19,9 @@ export default function ManageInvoices() {
     setWork(bookingId, 'creating')
     try {
       await create(bookingId)
-      setAlert({ type:'success', msg:'Faktura skapad!' })
+      addToast('Faktura skapad!')
     } catch (err) {
-      setAlert({ type:'error', msg: err.message })
+      addToast(err.message, 'error')
     } finally { setWork(bookingId, null) }
   }
 
@@ -29,29 +29,29 @@ export default function ManageInvoices() {
     setWork(invoice.id, 'emailing')
     try {
       await sendEmail(invoice.id)
-      setAlert({ type:'success', msg:`Faktura skickad till ${invoice.buyer_email}` })
+      addToast(`Faktura skickad till ${invoice.buyer_email}`)
     } catch (err) {
-      setAlert({ type:'error', msg: err.message })
+      addToast(err.message, 'error')
     } finally { setWork(invoice.id, null) }
   }
 
   const handlePaid = async (invoice) => {
-    if (!window.confirm('Markera faktura som betald?')) return
+    const ok = await ask({ title: 'Markera som betald?', message: 'Vill du markera denna faktura som betald?', confirmText: 'Markera som betald' })
+    if (!ok) return
     setWork(invoice.id, 'paying')
     try {
       await markPaid(invoice.id)
-      setAlert({ type:'success', msg:'Faktura markerad som betald' })
+      addToast('Faktura markerad som betald')
     } catch (err) {
-      setAlert({ type:'error', msg: err.message })
+      addToast(err.message, 'error')
     } finally { setWork(invoice.id, null) }
   }
 
   return (
     <AdminLayout title="Fakturor">
-      {alert && <Alert type={alert.type} onClose={() => setAlert(null)}>{alert.msg}</Alert>}
 
       {uninvoiced.length > 0 && (
-        <Card style={{marginBottom:'1.5rem'}}>
+        <Card style={{ marginBottom: '1.5rem' }}>
           <h3>Bokningar utan faktura ({uninvoiced.length})</h3>
           <table className="admin-table">
             <thead><tr><th>#</th><th>Kund</th><th>Kurs</th><th>Datum</th><th>Belopp</th><th></th></tr></thead>
@@ -95,7 +95,7 @@ export default function ManageInvoices() {
                       {inv.status === 'paid' ? 'Betald' : 'Obetald'}
                     </Badge>
                   </td>
-                  <td style={{display:'flex',gap:'0.25rem',flexWrap:'wrap'}}>
+                  <td style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
                     <button className="btn btn-sm btn-secondary" onClick={() => downloadPdf(inv.id)} title="Ladda ner PDF">⬇ PDF</button>
                     <Button size="sm" variant="secondary" loading={working[inv.id] === 'emailing'} onClick={() => handleEmail(inv)} title="Skicka via e-post">
                       ✉ Email

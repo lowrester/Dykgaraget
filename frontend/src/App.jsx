@@ -7,22 +7,22 @@ import Header from './components/layout/Header.jsx'
 import Footer from './components/layout/Footer.jsx'
 
 // Public pages
-import Home        from './pages/public/Home.jsx'
-import Courses     from './pages/public/Courses.jsx'
+import Home from './pages/public/Home.jsx'
+import Courses from './pages/public/Courses.jsx'
 import Instructors from './pages/public/Instructors.jsx'
-import Equipment   from './pages/public/Equipment.jsx'
-import Booking     from './pages/public/Booking.jsx'
-import Contact     from './pages/public/Contact.jsx'
+import Equipment from './pages/public/Equipment.jsx'
+import Booking from './pages/public/Booking.jsx'
+import Contact from './pages/public/Contact.jsx'
 
 // Admin pages
-import AdminLogin        from './pages/admin/Login.jsx'
-import AdminDashboard    from './pages/admin/Dashboard.jsx'
-import ManageCourses     from './pages/admin/ManageCourses.jsx'
-import ManageEquipment   from './pages/admin/ManageEquipment.jsx'
+import AdminLogin from './pages/admin/Login.jsx'
+import AdminDashboard from './pages/admin/Dashboard.jsx'
+import ManageCourses from './pages/admin/ManageCourses.jsx'
+import ManageEquipment from './pages/admin/ManageEquipment.jsx'
 import ManageInstructors from './pages/admin/ManageInstructors.jsx'
-import ManageBookings    from './pages/admin/ManageBookings.jsx'
-import ManageInvoices    from './pages/admin/ManageInvoices.jsx'
-import FeatureSettings   from './pages/admin/FeatureSettings.jsx'
+import ManageBookings from './pages/admin/ManageBookings.jsx'
+import ManageInvoices from './pages/admin/ManageInvoices.jsx'
+import FeatureSettings from './pages/admin/FeatureSettings.jsx'
 
 // Stripe redirect-sidor (inline — enkla)
 function PaymentSuccess() {
@@ -33,7 +33,7 @@ function PaymentSuccess() {
         <h1>Betalning genomförd!</h1>
         <p>Tack! Din betalning har mottagits och fakturan är markerad som betald.</p>
         <p>En bekräftelse skickas till din e-postadress.</p>
-        <a href="/" className="btn btn-primary" style={{marginTop:'1.5rem'}}>Tillbaka till startsidan</a>
+        <a href="/" className="btn btn-primary" style={{ marginTop: '1.5rem' }}>Tillbaka till startsidan</a>
       </div>
     </div>
   )
@@ -47,20 +47,22 @@ function PaymentCancelled() {
         <h1>Betalning avbruten</h1>
         <p>Betalningen avbröts. Fakturan är fortfarande obetald.</p>
         <p>Kontakta oss om du behöver hjälp med betalningen.</p>
-        <a href="/kontakt" className="btn btn-secondary" style={{marginTop:'1.5rem'}}>Kontakta oss</a>
+        <a href="/kontakt" className="btn btn-secondary" style={{ marginTop: '1.5rem' }}>Kontakta oss</a>
       </div>
     </div>
   )
 }
 
+import { ConfirmModal, ToastContainer } from './components/common/index.jsx'
+
 // Skydda admin-routes - väntar på initAuth innan redirect
 function ProtectedRoute({ children }) {
-  const user    = useAuthStore((s) => s.user)
+  const user = useAuthStore((s) => s.user)
   const loading = useAuthStore((s) => s.loading)
 
   if (loading) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div className="spinner" />
       </div>
     )
@@ -80,8 +82,8 @@ function PublicLayout({ children }) {
 }
 
 export default function App() {
-  const initAuth       = useAuthStore((s) => s.initAuth)
-  const fetchFeatures  = useSettingsStore((s) => s.fetchFeatures)
+  const initAuth = useAuthStore((s) => s.initAuth)
+  const fetchFeatures = useSettingsStore((s) => s.fetchFeatures)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -95,7 +97,7 @@ export default function App() {
   // Visa ingenting tills auth-kontroll är klar (undviker flash-redirect)
   if (!ready) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
         <div className="spinner" />
       </div>
     )
@@ -105,29 +107,31 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public */}
-        <Route path="/"               element={<PublicLayout><Home /></PublicLayout>} />
+        <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
         <Route path="/certifieringar" element={<PublicLayout><Courses /></PublicLayout>} />
-        <Route path="/instruktorer"   element={<PublicLayout><Instructors /></PublicLayout>} />
-        <Route path="/utrustning"     element={<PublicLayout><Equipment /></PublicLayout>} />
-        <Route path="/bokning"        element={<PublicLayout><Booking /></PublicLayout>} />
-        <Route path="/kontakt"        element={<PublicLayout><Contact /></PublicLayout>} />
+        <Route path="/instruktorer" element={<PublicLayout><Instructors /></PublicLayout>} />
+        <Route path="/utrustning" element={<PublicLayout><Equipment /></PublicLayout>} />
+        <Route path="/bokning" element={<PublicLayout><Booking /></PublicLayout>} />
+        <Route path="/kontakt" element={<PublicLayout><Contact /></PublicLayout>} />
 
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin"                  element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
-        <Route path="/admin/kurser"           element={<ProtectedRoute><ManageCourses /></ProtectedRoute>} />
-        <Route path="/admin/utrustning"       element={<ProtectedRoute><ManageEquipment /></ProtectedRoute>} />
-        <Route path="/admin/instruktorer"     element={<ProtectedRoute><ManageInstructors /></ProtectedRoute>} />
-        <Route path="/admin/bokningar"        element={<ProtectedRoute><ManageBookings /></ProtectedRoute>} />
-        <Route path="/admin/fakturor"         element={<ProtectedRoute><ManageInvoices /></ProtectedRoute>} />
-        <Route path="/admin/installningar"    element={<ProtectedRoute><FeatureSettings /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/kurser" element={<ProtectedRoute><ManageCourses /></ProtectedRoute>} />
+        <Route path="/admin/utrustning" element={<ProtectedRoute><ManageEquipment /></ProtectedRoute>} />
+        <Route path="/admin/instruktorer" element={<ProtectedRoute><ManageInstructors /></ProtectedRoute>} />
+        <Route path="/admin/bokningar" element={<ProtectedRoute><ManageBookings /></ProtectedRoute>} />
+        <Route path="/admin/fakturor" element={<ProtectedRoute><ManageInvoices /></ProtectedRoute>} />
+        <Route path="/admin/installningar" element={<ProtectedRoute><FeatureSettings /></ProtectedRoute>} />
 
         {/* Stripe redirect-sidor */}
         <Route path="/betalning/bekraftad" element={<PublicLayout><PaymentSuccess /></PublicLayout>} />
-        <Route path="/betalning/avbruten"  element={<PublicLayout><PaymentCancelled /></PublicLayout>} />
+        <Route path="/betalning/avbruten" element={<PublicLayout><PaymentCancelled /></PublicLayout>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <ConfirmModal />
+      <ToastContainer />
     </BrowserRouter>
   )
 }

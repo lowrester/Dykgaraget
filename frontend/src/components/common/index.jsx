@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { useAuthStore, useSettingsStore } from '../../store/index.js'
+import { useAuthStore, useSettingsStore, useUIStore } from '../../store/index.js'
 
 // ── Button ──────────────────────────────────────────────────
 export function Button({ children, variant = 'primary', size = 'md', loading = false, disabled, className = '', ...props }) {
@@ -194,6 +194,48 @@ export function AdminLayout({ title, children }) {
         </div>
         <div className="admin-content">{children}</div>
       </main>
+    </div>
+  )
+}
+
+// ── Confirm Modal ───────────────────────────────────────────
+export function ConfirmModal() {
+  const confirm = useUIStore((s) => s.confirm)
+  if (!confirm) return null
+
+  return (
+    <div className="modal-backdrop" style={{ zIndex: 1000 }}>
+      <div className="modal-box" style={{ maxWidth: 400 }}>
+        <div className="modal-header">
+          <h2>{confirm.title || 'Är du säker?'}</h2>
+        </div>
+        <div className="modal-body">
+          <p style={{ color: 'var(--gray-600)', fontSize: '0.9rem' }}>{confirm.message}</p>
+        </div>
+        <div className="modal-footer">
+          <Button variant="secondary" onClick={confirm.onCancel}>Avbryt</Button>
+          <Button variant={confirm.type === 'danger' ? 'danger' : 'primary'} onClick={confirm.onConfirm}>
+            {confirm.confirmText || 'Fortsätt'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Toasts ──────────────────────────────────────────────────
+export function ToastContainer() {
+  const toasts = useUIStore((s) => s.toasts)
+  const remove = useUIStore((s) => s.removeToast)
+
+  return (
+    <div className="toast-container">
+      {toasts.map((t) => (
+        <div key={t.id} className={`toast toast-${t.type}`} onClick={() => remove(t.id)}>
+          <span className="toast-icon">{t.type === 'success' ? '✅' : t.type === 'error' ? '❌' : 'ℹ️'}</span>
+          <span className="toast-msg">{t.message}</span>
+        </div>
+      ))}
     </div>
   )
 }

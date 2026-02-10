@@ -260,3 +260,38 @@ export const useInvoicesStore = create((set) => ({
     window.open(`${base}/invoices/${id}/pdf`, '_blank')
   },
 }))
+
+// ── UI Store (Toasts & Confirmations) ──────────────────────────
+export const useUIStore = create((set, get) => ({
+  toasts: [],
+  confirm: null, // { title, message, onConfirm, onCancel, type }
+
+  addToast: (message, type = 'success', duration = 4000) => {
+    const id = Date.now()
+    set((s) => ({ toasts: [...s.toasts, { id, message, type }] }))
+    if (duration) {
+      setTimeout(() => get().removeToast(id), duration)
+    }
+  },
+  removeToast: (id) => {
+    set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
+  },
+
+  ask: (options) => {
+    return new Promise((resolve) => {
+      set({
+        confirm: {
+          ...options,
+          onConfirm: () => {
+            set({ confirm: null })
+            resolve(true)
+          },
+          onCancel: () => {
+            set({ confirm: null })
+            resolve(false)
+          },
+        },
+      })
+    })
+  },
+}))

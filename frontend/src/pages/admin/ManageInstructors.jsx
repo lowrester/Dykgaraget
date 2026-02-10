@@ -1,23 +1,23 @@
 import { useState, useEffect } from 'react'
-import { useInstructorsStore } from '../../store/index.js'
-import { AdminLayout, Card, Modal, Button, Input, Alert } from '../../components/common/index.jsx'
+import { useInstructorsStore, useUIStore } from '../../store/index.js'
+import { AdminLayout, Card, Modal, Button, Input } from '../../components/common/index.jsx'
 
-const EMPTY = { name:'', specialty:'', experience_years:0, certifications:'', bio:'', hourly_rate:'', photo_url:'', is_available:true }
+const EMPTY = { name: '', specialty: '', experience_years: 0, certifications: '', bio: '', hourly_rate: '', photo_url: '', is_available: true }
 
 export default function ManageInstructors() {
   const { instructors, fetch, create, update, remove, loading } = useInstructorsStore()
-  const [modal,   setModal]   = useState(false)
+  const { addToast, ask } = useUIStore()
+  const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form,    setForm]    = useState(EMPTY)
-  const [alert,   setAlert]   = useState(null)
-  const [saving,  setSaving]  = useState(false)
+  const [form, setForm] = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => { fetch() }, [fetch])
 
-  const openNew  = () => { setEditing(null); setForm(EMPTY); setModal(true) }
+  const openNew = () => { setEditing(null); setForm(EMPTY); setModal(true) }
   const openEdit = (i) => { setEditing(i); setForm({ ...i, hourly_rate: String(i.hourly_rate || '') }); setModal(true) }
-  const close    = () => { setModal(false); setEditing(null) }
-  const set      = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+  const close = () => { setModal(false); setEditing(null) }
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
   const handleSave = async () => {
     if (!form.name.trim()) return
@@ -25,23 +25,27 @@ export default function ManageInstructors() {
     try {
       const payload = { ...form, experience_years: parseInt(form.experience_years) || 0, hourly_rate: parseFloat(form.hourly_rate) || 0 }
       if (editing) await update(editing.id, payload)
-      else         await create(payload)
-      setAlert({ type:'success', msg: editing ? 'Uppdaterad!' : 'Skapad!' })
+      else await create(payload)
+      addToast(editing ? 'Instruktör uppdaterad!' : 'Instruktör skapad!')
       close()
     } catch (err) {
-      setAlert({ type:'error', msg: err.message })
+      addToast(err.message, 'error')
     } finally { setSaving(false) }
   }
 
   const handleDelete = async (inst) => {
-    if (!window.confirm(`Ta bort "${inst.name}"?`)) return
-    try { await remove(inst.id); setAlert({ type:'success', msg:'Borttagen' }) }
-    catch (err) { setAlert({ type:'error', msg: err.message }) }
+    const ok = await ask({ title: 'Ta bort instruktör?', message: `Är du säker på att du vill ta bort "${inst.name}"?`, type: 'danger', confirmText: 'Ta bort' })
+    if (!ok) return
+    try {
+      await remove(inst.id)
+      addToast('Instruktör borttagen')
+    } catch (err) {
+      addToast(err.message, 'error')
+    }
   }
 
   return (
     <AdminLayout title="Instruktörer">
-      {alert && <Alert type={alert.type} onClose={() => setAlert(null)}>{alert.msg}</Alert>}
       <div className="page-actions"><Button onClick={openNew}>+ Ny instruktör</Button></div>
       {loading ? <div className="spinner-wrapper"><div className="spinner" /></div> : (
         <div className="grid grid-3">
@@ -49,15 +53,15 @@ export default function ManageInstructors() {
           {instructors.map((inst) => (
             <Card key={inst.id} className="instructor-card">
               {inst.photo_url
-                ? <img src={inst.photo_url} alt={inst.name} className="instructor-avatar" style={{objectFit:'cover'}} />
+                ? <img src={inst.photo_url} alt={inst.name} className="instructor-avatar" style={{ objectFit: 'cover' }} />
                 : <div className="instructor-avatar">{inst.name.charAt(0)}</div>
               }
               <h3>{inst.name}</h3>
               <p className="instructor-specialty">{inst.specialty}</p>
-              <p style={{fontSize:'0.875rem',color:'var(--gray-600)'}}>{inst.bio}</p>
-              <p style={{fontSize:'0.8rem'}}><strong>Erfarenhet:</strong> {inst.experience_years} år</p>
-              <p style={{fontSize:'0.8rem'}}><strong>Certifikat:</strong> {inst.certifications}</p>
-              <div style={{display:'flex',gap:'0.5rem',marginTop:'1rem'}}>
+              <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>{inst.bio}</p>
+              <p style={{ fontSize: '0.8rem' }}><strong>Erfarenhet:</strong> {inst.experience_years} år</p>
+              <p style={{ fontSize: '0.8rem' }}><strong>Certifikat:</strong> {inst.certifications}</p>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
                 <button className="btn btn-sm btn-secondary" onClick={() => openEdit(inst)}>Redigera</button>
                 <button className="btn btn-sm btn-danger" onClick={() => handleDelete(inst)}>Ta bort</button>
               </div>
@@ -84,10 +88,10 @@ export default function ManageInstructors() {
           <label className="form-label">Profilbild (URL)</label>
           <input className="form-input" value={form.photo_url || ''} onChange={(e) => set('photo_url', e.target.value)} placeholder="https://..." />
           {form.photo_url && (
-            <img src={form.photo_url} alt="Förhandsgranskning" style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',marginTop:'0.5rem',border:'2px solid var(--gray-200)'}} />
+            <img src={form.photo_url} alt="Förhandsgranskning" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', marginTop: '0.5rem', border: '2px solid var(--gray-200)' }} />
           )}
         </div>
-        <div className="form-group" style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
+        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" id="inst_avail" checked={form.is_available} onChange={(e) => set('is_available', e.target.checked)} />
           <label htmlFor="inst_avail">Tillgänglig för bokningar</label>
         </div>

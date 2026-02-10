@@ -1,36 +1,36 @@
 import { useEffect, useState } from 'react'
-import { useSettingsStore } from '../../store/index.js'
-import { AdminLayout, Card, Alert, Spinner, Button } from '../../components/common/index.jsx'
+import { useSettingsStore, useUIStore } from '../../store/index.js'
+import { AdminLayout, Card, Spinner, Button } from '../../components/common/index.jsx'
 
 const FEATURE_META = {
-  equipment: { label:'Utrustningsmodul', icon:'🤿',  desc:'Utrustningshantering, inventarie och uthyrning vid bokning.', deps:[] },
-  invoicing: { label:'Faktureringsmodul', icon:'🧾',  desc:'PDF-fakturering och e-postutskick till kunder.', deps:[], required_by:['payment'] },
-  payment:   { label:'Betalningsmodul',   icon:'💳',  desc:'Onlinebetalning via Stripe. Kräver att faktureringsmodulen är aktiverad.', deps:['invoicing'] },
-  email:     { label:'E-postmodul',       icon:'✉️',  desc:'Bokningsbekräftelser och fakturanotiser via e-post.', deps:[] },
+  equipment: { label: 'Utrustningsmodul', icon: '🤿', desc: 'Utrustningshantering, inventarie och uthyrning vid bokning.', deps: [] },
+  invoicing: { label: 'Faktureringsmodul', icon: '🧾', desc: 'PDF-fakturering och e-postutskick till kunder.', deps: [], required_by: ['payment'] },
+  payment: { label: 'Betalningsmodul', icon: '💳', desc: 'Onlinebetalning via Stripe. Kräver att faktureringsmodulen är aktiverad.', deps: ['invoicing'] },
+  email: { label: 'E-postmodul', icon: '✉️', desc: 'Bokningsbekräftelser och fakturanotiser via e-post.', deps: [] },
 }
 
 const COMPANY_LABELS = {
-  company_name:        'Företagsnamn',
-  company_org_number:  'Org.nummer',
-  company_address:     'Adress',
-  company_phone:       'Telefon',
-  company_email:       'E-post',
-  company_bank_account:'Bankgiro / konto',
+  company_name: 'Företagsnamn',
+  company_org_number: 'Org.nummer',
+  company_address: 'Adress',
+  company_phone: 'Telefon',
+  company_email: 'E-post',
+  company_bank_account: 'Bankgiro / konto',
 }
 
 const INVOICE_LABELS = {
-  invoice_vat_rate:    'Momssats',
-  invoice_terms_days:  'Betalningsvillkor (dagar)',
-  invoice_prefix:      'Fakturanummer-prefix',
+  invoice_vat_rate: 'Momssats',
+  invoice_terms_days: 'Betalningsvillkor (dagar)',
+  invoice_prefix: 'Fakturanummer-prefix',
 }
 
 export default function FeatureSettings() {
   const { features, settings, fetchFeatures, fetchSettings, updateSetting } = useSettingsStore()
-  const [alert,      setAlert]    = useState(null)
-  const [toggling,   setToggling] = useState(false)
-  const [editKey,    setEditKey]  = useState(null)   // vilket settings-nyckel redigeras
-  const [editValue,  setEditValue] = useState('')
-  const [saving,     setSaving]   = useState(false)
+  const { addToast, ask } = useUIStore()
+  const [toggling, setToggling] = useState(false)
+  const [editKey, setEditKey] = useState(null)   // vilket settings-nyckel redigeras
+  const [editValue, setEditValue] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => { fetchSettings(); fetchFeatures() }, [fetchSettings, fetchFeatures])
 
@@ -38,18 +38,19 @@ export default function FeatureSettings() {
     const newValue = !currentValue
     const meta = FEATURE_META[key]
     if (key === 'payment' && newValue && !features.invoicing) {
-      setAlert({ type:'error', msg:'Faktureringsmodulen måste vara aktiverad innan betalningsmodulen kan aktiveras.' })
+      addToast('Faktureringsmodulen måste vara aktiverad innan betalningsmodulen kan aktiveras.', 'error')
       return
     }
     if (key === 'invoicing' && !newValue && features.payment) {
-      if (!window.confirm('Betalningsmodulen kräver fakturering. Båda inaktiveras — fortsätt?')) return
+      const ok = await ask({ title: 'Betalningsmodul kräver fakturering', message: 'Betalningsmodulen kräver fakturering. Om du inaktiverar fakturering kommer även betalningar att inaktiveras. Fortsätt?', type: 'danger', confirmText: 'Inaktivera båda' })
+      if (!ok) return
     }
     setToggling(true)
     try {
       await updateSetting(`feature_${key}`, String(newValue))
-      setAlert({ type:'success', msg:`${meta.label} ${newValue ? 'aktiverad' : 'inaktiverad'}` })
+      addToast(`${meta.label} ${newValue ? 'aktiverad' : 'inaktiverad'}`)
     } catch (err) {
-      setAlert({ type:'error', msg: err.message })
+      addToast(err.message, 'error')
     } finally { setToggling(false) }
   }
 
@@ -61,10 +62,10 @@ export default function FeatureSettings() {
     setSaving(true)
     try {
       await updateSetting(editKey, editValue)
-      setAlert({ type:'success', msg:'Inställning sparad' })
+      addToast('Inställning sparad')
       cancelEdit()
     } catch (err) {
-      setAlert({ type:'error', msg: err.message })
+      addToast(err.message, 'error')
     } finally { setSaving(false) }
   }
 
@@ -75,11 +76,10 @@ export default function FeatureSettings() {
 
   return (
     <AdminLayout title="Inställningar">
-      {alert && <Alert type={alert.type} onClose={() => setAlert(null)}>{alert.msg}</Alert>}
 
       {/* ── Moduler ─────────────────────────────────── */}
-      <Card style={{marginBottom:'2rem'}}>
-        <h2 style={{marginBottom:'1.5rem'}}>Moduler</h2>
+      <Card style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '1.5rem' }}>Moduler</h2>
         <div className="feature-grid">
           {Object.entries(FEATURE_META).map(([key, meta]) => {
             const enabled = features[key]
@@ -103,38 +103,38 @@ export default function FeatureSettings() {
             )
           })}
         </div>
-        {toggling && <div style={{marginTop:'1rem'}}><Spinner text="Uppdaterar..." /></div>}
+        {toggling && <div style={{ marginTop: '1rem' }}><Spinner text="Uppdaterar..." /></div>}
       </Card>
 
       {/* ── Företagsinformation (redigerbart) ────────── */}
       {companySettings.length > 0 && (
-        <Card style={{marginBottom:'2rem'}}>
-          <h2 style={{marginBottom:'0.5rem'}}>Företagsinformation</h2>
-          <p style={{color:'var(--gray-500)',fontSize:'0.875rem',marginBottom:'1.5rem'}}>
+        <Card style={{ marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '0.5rem' }}>Företagsinformation</h2>
+          <p style={{ color: 'var(--gray-500)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
             Visas i genererade PDF-fakturor.
           </p>
           <table className="admin-table">
             <tbody>
               {companySettings.map(s => (
                 <tr key={s.key}>
-                  <td style={{width:'38%',fontWeight:600}}>
+                  <td style={{ width: '38%', fontWeight: 600 }}>
                     {COMPANY_LABELS[s.key] || s.description || s.key}
                   </td>
                   <td>
                     {editKey === s.key ? (
-                      <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
-                        <input className="form-input" style={{marginBottom:0}} autoFocus
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input className="form-input" style={{ marginBottom: 0 }} autoFocus
                           value={editValue} onChange={e => setEditValue(e.target.value)}
-                          onKeyDown={e => { if(e.key==='Enter') saveEdit(); if(e.key==='Escape') cancelEdit() }} />
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }} />
                         <Button size="sm" onClick={saveEdit} loading={saving}>Spara</Button>
                         <Button size="sm" variant="secondary" onClick={cancelEdit}>Avbryt</Button>
                       </div>
                     ) : (
-                      <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-                        <span style={{color: s.value ? 'var(--gray-700)' : 'var(--gray-300)', fontStyle: s.value ? 'normal' : 'italic'}}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: s.value ? 'var(--gray-700)' : 'var(--gray-300)', fontStyle: s.value ? 'normal' : 'italic' }}>
                           {s.value || 'Ej angett'}
                         </span>
-                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)} style={{marginLeft:'auto', opacity:0.7}}>
+                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)} style={{ marginLeft: 'auto', opacity: 0.7 }}>
                           ✎ Redigera
                         </button>
                       </div>
@@ -150,32 +150,32 @@ export default function FeatureSettings() {
       {/* ── Fakturainställningar (redigerbart) ──────── */}
       {invoiceSettings.length > 0 && (
         <Card>
-          <h2 style={{marginBottom:'0.5rem'}}>Fakturainställningar</h2>
-          <p style={{color:'var(--gray-500)',fontSize:'0.875rem',marginBottom:'1.5rem'}}>
+          <h2 style={{ marginBottom: '0.5rem' }}>Fakturainställningar</h2>
+          <p style={{ color: 'var(--gray-500)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
             Inställningar för fakturagenerering och betalningsvillkor.
           </p>
           <table className="admin-table">
             <tbody>
               {invoiceSettings.map(s => (
                 <tr key={s.key}>
-                  <td style={{width:'38%',fontWeight:600}}>
+                  <td style={{ width: '38%', fontWeight: 600 }}>
                     {INVOICE_LABELS[s.key] || s.description || s.key}
                   </td>
                   <td>
                     {editKey === s.key ? (
-                      <div style={{display:'flex',gap:'0.5rem',alignItems:'center'}}>
-                        <input className="form-input" style={{marginBottom:0}} autoFocus
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input className="form-input" style={{ marginBottom: 0 }} autoFocus
                           value={editValue} onChange={e => setEditValue(e.target.value)}
-                          onKeyDown={e => { if(e.key==='Enter') saveEdit(); if(e.key==='Escape') cancelEdit() }} />
+                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }} />
                         <Button size="sm" onClick={saveEdit} loading={saving}>Spara</Button>
                         <Button size="sm" variant="secondary" onClick={cancelEdit}>Avbryt</Button>
                       </div>
                     ) : (
-                      <div style={{display:'flex',alignItems:'center',gap:'0.75rem'}}>
-                        <span style={{color: s.value ? 'var(--gray-700)' : 'var(--gray-300)', fontStyle: s.value ? 'normal' : 'italic'}}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <span style={{ color: s.value ? 'var(--gray-700)' : 'var(--gray-300)', fontStyle: s.value ? 'normal' : 'italic' }}>
                           {s.value || 'Ej angett'}
                         </span>
-                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)} style={{marginLeft:'auto', opacity:0.7}}>
+                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)} style={{ marginLeft: 'auto', opacity: 0.7 }}>
                           ✎ Redigera
                         </button>
                       </div>
