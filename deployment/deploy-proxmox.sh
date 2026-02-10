@@ -96,21 +96,21 @@ else
 fi
 
 # Check if database exists
-if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
+if sudo -u postgres -i psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
   warn "Database '$DB_NAME' already exists, skipping creation"
 else
   info "Creating database '$DB_NAME'..."
-  sudo -u postgres psql << EOFDB
+  sudo -u postgres -i psql << EOFDB
 CREATE DATABASE $DB_NAME;
 EOFDB
 fi
 
 # Check if user exists
-if sudo -u postgres psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
+if sudo -u postgres -i psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
   warn "Database user '$DB_USER' already exists, skipping creation"
 else
   info "Creating database user '$DB_USER'..."
-  sudo -u postgres psql << EOFDB
+  sudo -u postgres -i psql << EOFDB
 CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
 GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 EOFDB
