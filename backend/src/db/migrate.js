@@ -225,7 +225,7 @@ async function run() {
       ('company_address', 'Dykgatan 1, 123 45 Stockholm', 'company', 'Adress'),
       ('company_email', 'info@dykgaraget.se', 'company', 'E-post'),
       ('company_phone', '070-123 45 67', 'company', 'Telefon'),
-      ('company_bank', '1234-5 678 901', 'company', 'Bankkontonummer'),
+      ('company_bank_account', '1234-5 678 901', 'company', 'Bankkontonummer'),
       ('company_f_skatt', 'true', 'company', 'Godkänd för F-skatt'),
       ('invoice_prefix', 'DYK', 'invoicing', 'Prefix för fakturanummer'),
       ('invoice_terms_days', '30', 'invoicing', 'Betalningsvillkor (dagar)'),
