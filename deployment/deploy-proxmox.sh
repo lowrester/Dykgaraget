@@ -148,7 +148,7 @@ cd $BACKEND_DIR
 
 # Install dependencies
 info "Installing backend dependencies..."
-npm install --production --quiet
+npm install --omit=dev --quiet
 
 # Setup .env
 if [ -f .env ]; then
