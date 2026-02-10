@@ -1,8 +1,20 @@
 import express from 'express'
 import { pool } from '../db/connection.js'
 import { authenticateAdmin } from '../middleware/auth.js'
+import { uploadInstructorPhoto } from '../middleware/upload.js'
 
 const router = express.Router()
+
+// ── Ladda upp bild ──────────────────────────────────────────
+router.post('/upload', authenticateAdmin, uploadInstructorPhoto.single('photo'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Ingen fil uppladdad' })
+    const url = `/uploads/instructors/${req.file.filename}`
+    res.json({ url })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 router.get('/', async (req, res) => {
   try {
@@ -30,7 +42,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
 router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
-    const fields = ['name','specialty','experience_years','certifications','bio','hourly_rate','is_available','insurance_valid','photo_url']
+    const fields = ['name', 'specialty', 'experience_years', 'certifications', 'bio', 'hourly_rate', 'is_available', 'insurance_valid', 'photo_url']
     const updates = []; const values = []; let i = 1
     for (const field of fields) {
       if (req.body[field] !== undefined) { updates.push(`${field} = $${i++}`); values.push(req.body[field]) }

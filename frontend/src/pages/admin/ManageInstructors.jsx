@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useInstructorsStore, useUIStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input } from '../../components/common/index.jsx'
+import { api } from '../../api/client.js'
 
 const EMPTY = { name: '', specialty: '', experience_years: 0, certifications: '', bio: '', hourly_rate: '', photo_url: '', is_available: true }
 
@@ -11,6 +12,8 @@ export default function ManageInstructors() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -18,6 +21,27 @@ export default function ManageInstructors() {
   const openEdit = (i) => { setEditing(i); setForm({ ...i, hourly_rate: String(i.hourly_rate || '') }); setModal(true) }
   const close = () => { setModal(false); setEditing(null) }
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('photo', file)
+
+    try {
+      const { url } = await api.post('/instructors/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      set('photo_url', url)
+      addToast('Bild uppladdad!')
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleSave = async () => {
     if (!form.name.trim()) return
@@ -44,6 +68,15 @@ export default function ManageInstructors() {
     }
   }
 
+  const getFullUrl = (url) => {
+    if (!url) return null
+    if (url.startsWith('http')) return url
+    const base = import.meta.env.VITE_API_URL || '/api'
+    // Om det börjar med /uploads, ta bort /api om det finns i base (förenklat)
+    const normalizedBase = base.endsWith('/api') ? base.slice(0, -4) : base
+    return `${normalizedBase}${url}`
+  }
+
   return (
     <AdminLayout title="Instruktörer">
       <div className="page-actions"><Button onClick={openNew}>+ Ny instruktör</Button></div>
@@ -53,7 +86,7 @@ export default function ManageInstructors() {
           {instructors.map((inst) => (
             <Card key={inst.id} className="instructor-card">
               {inst.photo_url
-                ? <img src={inst.photo_url} alt={inst.name} className="instructor-avatar" style={{ objectFit: 'cover' }} />
+                ? <img src={getFullUrl(inst.photo_url)} alt={inst.name} className="instructor-avatar" style={{ objectFit: 'cover' }} />
                 : <div className="instructor-avatar">{inst.name.charAt(0)}</div>
               }
               <h3>{inst.name}</h3>
@@ -84,13 +117,47 @@ export default function ManageInstructors() {
           <label className="form-label">Bio</label>
           <textarea className="form-input form-textarea" rows={3} value={form.bio} onChange={(e) => set('bio', e.target.value)} />
         </div>
+
         <div className="form-group">
-          <label className="form-label">Profilbild (URL)</label>
-          <input className="form-input" value={form.photo_url || ''} onChange={(e) => set('photo_url', e.target.value)} placeholder="https://..." />
-          {form.photo_url && (
-            <img src={form.photo_url} alt="Förhandsgranskning" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', marginTop: '0.5rem', border: '2px solid var(--gray-200)' }} />
-          )}
+          <label className="form-label">Profilbild</label>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            {form.photo_url ? (
+              <img
+                src={getFullUrl(form.photo_url)}
+                alt="Förhandsgranskning"
+                style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--gray-200)' }}
+              />
+            ) : (
+              <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--gray-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>📷</div>
+            )}
+            <div style={{ flex: 1 }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                accept="image/*"
+                onChange={handleFileUpload}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                loading={uploading}
+              >
+                {form.photo_url ? 'Byt bild' : 'Ladda upp bild'}
+              </Button>
+              <div style={{ marginTop: '0.5rem' }}>
+                <Input
+                  value={form.photo_url || ''}
+                  onChange={(e) => set('photo_url', e.target.value)}
+                  placeholder="Eller klistra in en URL här..."
+                  style={{ marginBottom: 0 }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
+
         <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input type="checkbox" id="inst_avail" checked={form.is_available} onChange={(e) => set('is_available', e.target.checked)} />
           <label htmlFor="inst_avail">Tillgänglig för bokningar</label>
