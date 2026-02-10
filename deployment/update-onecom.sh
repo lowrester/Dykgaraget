@@ -93,6 +93,13 @@ if [ ! -d .git ]; then
   warn "Inte ett git-repo — hoppar över git pull"
   warn "Kopiera nya filer manuellt till $APP_DIR om du inte använder git"
 else
+  # Auto-switch from HTTPS to SSH if needed
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+  if [[ "$CURRENT_REMOTE" == "https://github.com/lowrester/Dykgaraget.git" ]]; then
+    info "HTTPS-remote upptäckt, byter till SSH för privat repo-stöd..."
+    git remote set-url origin git@github.com:lowrester/Dykgaraget.git
+  fi
+
   info "Hämtar från git ..."
   git fetch origin
 

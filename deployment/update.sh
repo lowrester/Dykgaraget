@@ -42,16 +42,23 @@ cd $APP_DIR
 
 if [ ! -d .git ]; then
   warn "Not a git repository. Would you like to initialize it automatically?"
-  read -p "Initialize and link to GitHub? (y/n) " -n 1 -r
+  read -p "Initialize and link to GitHub (SSH)? (y/n) " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
-    info "Initializing git and linking to origin..."
+    info "Initializing git and linking to origin (SSH)..."
     git init
-    git remote add origin https://github.com/lowrester/Dykgaraget.git
+    git remote add origin git@github.com:lowrester/Dykgaraget.git
     git fetch origin
     git checkout -f main || git checkout -f master
   else
     warn "Skipping git setup. You must manually manage files."
+  fi
+else
+  # Auto-switch from HTTPS to SSH if needed
+  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+  if [[ "$CURRENT_REMOTE" == "https://github.com/lowrester/Dykgaraget.git" ]]; then
+    info "Detected HTTPS remote, switching to SSH for private repo support..."
+    git remote set-url origin git@github.com:lowrester/Dykgaraget.git
   fi
 fi
 
