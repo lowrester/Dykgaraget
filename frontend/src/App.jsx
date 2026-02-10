@@ -13,6 +13,9 @@ import Instructors from './pages/public/Instructors.jsx'
 import Equipment from './pages/public/Equipment.jsx'
 import Booking from './pages/public/Booking.jsx'
 import Contact from './pages/public/Contact.jsx'
+import Register from './pages/public/Register.jsx'
+import Login from './pages/public/Login.jsx'
+import Account from './pages/public/Account.jsx'
 
 // Admin pages
 import AdminLogin from './pages/admin/Login.jsx'
@@ -25,6 +28,7 @@ import ManageInvoices from './pages/admin/ManageInvoices.jsx'
 import FeatureSettings from './pages/admin/FeatureSettings.jsx'
 import ManageContent from './pages/admin/ManageContent.jsx'
 import ManageUsers from './pages/admin/ManageUsers.jsx'
+import ManageCustomers from './pages/admin/ManageCustomers.jsx'
 
 // Stripe redirect-sidor (inline — enkla)
 function PaymentSuccess() {
@@ -115,6 +119,9 @@ export default function App() {
         <Route path="/utrustning" element={<PublicLayout><Equipment /></PublicLayout>} />
         <Route path="/bokning" element={<PublicLayout><Booking /></PublicLayout>} />
         <Route path="/kontakt" element={<PublicLayout><Contact /></PublicLayout>} />
+        <Route path="/registrera" element={<PublicLayout><Register /></PublicLayout>} />
+        <Route path="/loggain" element={<PublicLayout><Login /></PublicLayout>} />
+        <Route path="/konto" element={<PublicLayout><Account /></PublicLayout>} />
 
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -126,6 +133,7 @@ export default function App() {
         <Route path="/admin/fakturor" element={<ProtectedRoute><ManageInvoices /></ProtectedRoute>} />
         <Route path="/admin/installningar" element={<ProtectedRoute><FeatureSettings /></ProtectedRoute>} />
         <Route path="/admin/innehall" element={<ProtectedRoute><ManageContent /></ProtectedRoute>} />
+        <Route path="/admin/kunder" element={<ProtectedRoute><ManageCustomers /></ProtectedRoute>} />
 
         {/* Stripe redirect-sidor */}
         <Route path="/betalning/bekraftad" element={<PublicLayout><PaymentSuccess /></PublicLayout>} />

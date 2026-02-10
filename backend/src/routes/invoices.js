@@ -3,11 +3,21 @@ import PDFDocument from 'pdfkit'
 import fs from 'fs'
 import path from 'path'
 import { pool } from '../db/connection.js'
-import { authenticateAdmin, checkFeature } from '../middleware/auth.js'
+import { authenticate, authenticateAdmin, checkFeature } from '../middleware/auth.js'
 import { sendEmail } from '../services/email.js'
 
 const router = express.Router()
 router.use(checkFeature('invoicing'))
+
+// GET /api/invoices/me (customer view)
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM invoices WHERE buyer_email = $1 ORDER BY created_at DESC', [req.user.email])
+    res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // GET /api/invoices  (admin)
 router.get('/', authenticateAdmin, async (req, res) => {
@@ -193,10 +203,15 @@ router.patch('/:id/archive', authenticateAdmin, async (req, res) => {
 })
 
 // GET /api/invoices/:id/pdf  – download PDF
-router.get('/:id/pdf', authenticateAdmin, async (req, res) => {
+router.get('/:id/pdf', authenticate, async (req, res) => {
   try {
     const invoice = await getInvoice(req.params.id)
     if (!invoice) return res.status(404).json({ error: 'Faktura hittades inte' })
+
+    // Check ownership if not admin
+    if (req.user.role !== 'admin' && invoice.buyer_email !== req.user.email) {
+      return res.status(403).json({ error: 'Du har inte tillgång till denna faktura' })
+    }
 
     // Fetch items if they exist
     const itemsRes = await pool.query('SELECT * FROM invoice_items WHERE invoice_id = $1', [invoice.id])

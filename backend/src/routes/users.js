@@ -90,4 +90,32 @@ router.delete('/:id', authenticateAdmin, async (req, res) => {
     }
 })
 
+// GET /api/users/me/export - GDPR Right to Access
+router.get('/me/export', async (req, res) => {
+    try {
+        // Fetch all data related to the user
+        const userRes = await pool.query('SELECT id, username, email, first_name, last_name, role, phone, address, gdpr_consent, gdpr_consent_date, created_at FROM users WHERE id = $1', [req.user.id])
+        const bookingsRes = await pool.query('SELECT * FROM bookings WHERE customer_id = $1', [req.user.id])
+        const invoicesRes = await pool.query('SELECT * FROM invoices WHERE buyer_email = $1', [userRes.rows[0].email])
+
+        res.json({
+            user: userRes.rows[0],
+            bookings: bookingsRes.rows,
+            invoices: invoicesRes.rows
+        })
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
+// DELETE /api/users/me - GDPR Right to be Forgotten
+router.delete('/me', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM users WHERE id = $1', [req.user.id])
+        res.json({ message: 'Ditt konto har tagits bort och din data har raderats i enlighet med GDPR.' })
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
 export default router

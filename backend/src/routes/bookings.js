@@ -1,8 +1,24 @@
 import express from 'express'
 import { pool } from '../db/connection.js'
-import { authenticateAdmin } from '../middleware/auth.js'
+import { authenticate, authenticateAdmin } from '../middleware/auth.js'
 
 const router = express.Router()
+
+// GET /api/bookings/me (customer view)
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT b.*, c.name AS course_name, c.price AS course_price
+      FROM bookings b
+      LEFT JOIN courses c ON b.course_id = c.id
+      WHERE b.customer_id = $1 OR b.email = $2
+      ORDER BY b.created_at DESC
+    `, [req.user.id, req.user.email])
+    res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // GET /api/bookings  (admin)
 router.get('/', authenticateAdmin, async (req, res) => {
@@ -125,10 +141,11 @@ router.post('/', async (req, res) => {
     const bookingResult = await client.query(
       `INSERT INTO bookings
          (course_id, booking_date, booking_time, participants, total_price,
-          first_name, last_name, email, phone, notes, status, schedule_id)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed', $11) RETURNING *`,
+          first_name, last_name, email, phone, notes, status, schedule_id, customer_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed', $11, $12) RETURNING *`,
       [course_id, finalDate, finalTime, participantCount, totalPrice,
-        sanitized.first_name, sanitized.last_name, sanitized.email, sanitized.phone, sanitized.notes, schedule_id]
+        sanitized.first_name, sanitized.last_name, sanitized.email, sanitized.phone, sanitized.notes, schedule_id,
+        req.user?.id || null]
     )
     const booking = bookingResult.rows[0]
 

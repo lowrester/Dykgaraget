@@ -3,8 +3,8 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuthStore, useSettingsStore } from '../../store/index.js'
 
 export default function Header() {
-  const user     = useAuthStore((s) => s.user)
-  const logout   = useAuthStore((s) => s.logout)
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
   const features = useSettingsStore((s) => s.features)
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
@@ -26,24 +26,31 @@ export default function Header() {
 
         {/* Nav */}
         <nav className={`nav${open ? ' open' : ''}`}>
-          <NavLink to="/"               className={({isActive}) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Hem</NavLink>
-          <NavLink to="/certifieringar" className={({isActive}) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Certifieringar</NavLink>
-          <NavLink to="/instruktorer"   className={({isActive}) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Instruktörer</NavLink>
+          <NavLink to="/" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Hem</NavLink>
+          <NavLink to="/certifieringar" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Certifieringar</NavLink>
+          <NavLink to="/instruktorer" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Instruktörer</NavLink>
           {features.equipment && (
-            <NavLink to="/utrustning"   className={({isActive}) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Utrustning</NavLink>
+            <NavLink to="/utrustning" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Utrustning</NavLink>
           )}
-          <NavLink to="/kontakt"        className={({isActive}) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Kontakt</NavLink>
+          <NavLink to="/kontakt" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Kontakt</NavLink>
         </nav>
 
         {/* Actions */}
         <div className="header-actions">
           {user ? (
             <>
-              <Link to="/admin" className="btn btn-secondary btn-sm">Admin</Link>
+              {user.role === 'admin' ? (
+                <Link to="/admin" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Admin</Link>
+              ) : (
+                <Link to="/konto" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Mina sidor</Link>
+              )}
               <button onClick={handleLogout} className="btn btn-ghost btn-sm">Logga ut</button>
             </>
           ) : (
-            <Link to="/bokning" className="btn btn-primary btn-sm">Boka nu</Link>
+            <>
+              <Link to="/loggain" className="btn btn-ghost btn-sm" style={{ marginRight: '0.5rem' }}>Logga in</Link>
+              <Link to="/bokning" className="btn btn-primary btn-sm">Boka nu</Link>
+            </>
           )}
 
           {/* Hamburger */}

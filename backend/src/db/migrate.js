@@ -197,6 +197,26 @@ async function run() {
         ) THEN
           ALTER TABLE invoices ADD COLUMN is_archived BOOLEAN DEFAULT false;
         END IF;
+
+        -- Booking & User updates for Customer Register / GDPR
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='bookings' AND column_name='customer_id'
+        ) THEN
+          ALTER TABLE bookings ADD COLUMN customer_id INT REFERENCES users(id) ON DELETE SET NULL;
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_name='users' AND column_name='phone'
+        ) THEN
+          ALTER TABLE users ADD COLUMN phone TEXT;
+          ALTER TABLE users ADD COLUMN address TEXT;
+          ALTER TABLE users ADD COLUMN postal_code TEXT;
+          ALTER TABLE users ADD COLUMN city TEXT;
+          ALTER TABLE users ADD COLUMN gdpr_consent BOOLEAN DEFAULT false;
+          ALTER TABLE users ADD COLUMN gdpr_consent_date TIMESTAMP;
+        END IF;
       END $$;
     `)
 

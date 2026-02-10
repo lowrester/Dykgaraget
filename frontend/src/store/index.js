@@ -33,6 +33,19 @@ export const useAuthStore = create((set) => ({
     }
   },
 
+  register: async (registerData) => {
+    set({ loading: true, error: null })
+    try {
+      const data = await client.post('/auth/register', registerData)
+      setToken(data.token)
+      set({ user: data.user, token: data.token, loading: false })
+      return data
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      throw err
+    }
+  },
+
   logout: () => {
     clearToken()
     set({ user: null, token: null })
@@ -40,6 +53,22 @@ export const useAuthStore = create((set) => ({
 
   changePassword: async (currentPassword, newPassword) => {
     return await client.post('/auth/change-password', { currentPassword, newPassword })
+  },
+
+  exportData: async () => {
+    const data = await client.get('/users/me/export')
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `dykgaraget-data-export.json`
+    link.click()
+  },
+
+  deleteAccount: async () => {
+    await client.delete('/users/me')
+    clearToken()
+    set({ user: null, token: null })
   },
 }))
 

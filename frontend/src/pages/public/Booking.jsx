@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react'
-import { useCoursesStore, useEquipmentStore, useBookingsStore, useSettingsStore } from '../../store/index.js'
+import { useCoursesStore, useEquipmentStore, useBookingsStore, useSettingsStore, useAuthStore } from '../../store/index.js'
 import { Card, Button, Input, Spinner, Alert } from '../../components/common/index.jsx'
+import { Link } from 'react-router-dom'
 
 const STEPS = ['Välj kurs', 'Dina uppgifter', 'Utrustning', 'Bekräftelse']
 
 export default function Booking() {
+  const { user } = useAuthStore()
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     course_id: '', booking_date: '', booking_time: '09:00', participants: 1,
-    first_name: '', last_name: '', email: '', phone: '',
+    first_name: user?.firstName || '',
+    last_name: user?.lastName || '',
+    email: user?.email || '',
+    phone: '',
     equipment_ids: [], notes: '',
+    gdprConsent: !!user
   })
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState(null)
@@ -53,6 +59,7 @@ export default function Booking() {
       if (!form.last_name) e.last_name = 'Efternamn krävs'
       if (!form.email) e.email = 'E-post krävs'
       if (form.email && !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Ogiltig e-post'
+      if (!form.gdprConsent) e.gdprConsent = 'Du måste godkänna integritetspolicyn'
     }
     setErrors(e)
     return Object.keys(e).length === 0
@@ -85,6 +92,7 @@ export default function Booking() {
         phone: form.phone,
         equipment_ids: form.equipment_ids,
         notes: form.notes,
+        customer_id: user?.id || null
       })
       setSuccess(booking)
       setStep(4)
@@ -107,9 +115,13 @@ export default function Booking() {
           <p>Tack {success?.first_name}! Din bokning är registrerad.</p>
           <p>Bokningsnummer: <strong>#{success?.id}</strong></p>
           <p>Bekräftelse skickas till <strong>{success?.email}</strong></p>
-          <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id: '', booking_date: '', booking_time: '09:00', participants: 1, first_name: '', last_name: '', email: '', phone: '', equipment_ids: [], notes: '', schedule_id: null }) }}>
-            Gör en ny bokning
-          </button>
+          {user ? (
+            <Link to="/konto" className="btn btn-primary">Gå till mina sidor</Link>
+          ) : (
+            <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id: '', booking_date: '', booking_time: '09:00', participants: 1, first_name: '', last_name: '', email: '', phone: '', equipment_ids: [], notes: '', schedule_id: null, gdprConsent: false }) }}>
+              Gör en ny bokning
+            </button>
+          )}
         </div>
       </div>
     )
@@ -213,13 +225,33 @@ export default function Booking() {
         {step === 1 && (
           <div className="booking-step">
             <h2>Dina uppgifter</h2>
+            {user ? (
+              <Alert type="info" style={{ marginBottom: '1.5rem' }}>
+                Du är inloggad som <strong>{user.firstName} {user.lastName}</strong>. Vi har förifyllt dina uppgifter.
+              </Alert>
+            ) : (
+              <div style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                Har du redan ett konto? <Link to="/loggain" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Logga in</Link> för smidigare bokning.
+              </div>
+            )}
             <div className="grid grid-2">
               <Input label="Förnamn" value={form.first_name} onChange={(e) => set('first_name', e.target.value)} error={errors.first_name} required />
               <Input label="Efternamn" value={form.last_name} onChange={(e) => set('last_name', e.target.value)} error={errors.last_name} required />
               <Input label="E-post" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} error={errors.email} required />
               <Input label="Telefon" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
             </div>
-            <div className="form-group">
+
+            {!user && (
+              <div style={{ marginTop: '1rem' }}>
+                <label className="checkbox-container" style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={form.gdprConsent} onChange={e => set('gdprConsent', e.target.checked)} required />
+                  <span>Jag godkänner att Dykgaraget sparar mina personuppgifter enligt <Link to="/integritetspolicy" target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>integritetspolicyn</Link>.*</span>
+                </label>
+                {errors.gdprConsent && <span className="error-msg" style={{ display: 'block', marginTop: '0.25rem' }}>{errors.gdprConsent}</span>}
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginTop: '1.5rem' }}>
               <label className="form-label">Övrigt</label>
               <textarea className="form-input form-textarea" rows={3} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Eventuella önskemål eller frågor..." />
             </div>
