@@ -39,7 +39,7 @@
   --gray-50: #F9FAFB;
   --white: #FFFFFF;
 
-  --header-h: 60px;
+  --header-h: 100px;
   --radius-sm: 6px;
   --radius: 10px;
   --radius-lg: 14px;
@@ -303,8 +303,8 @@ button {
 }
 
 .logo-img {
-  height: 48px;
-  width: 48px;
+  height: 80px;
+  width: 80px;
   object-fit: contain;
   border-radius: 50%;
 }
@@ -414,8 +414,8 @@ button {
 }
 
 .footer-logo-img {
-  height: 44px;
-  width: 44px;
+  height: 80px;
+  width: 80px;
   object-fit: contain;
   border-radius: 50%;
 }
@@ -1264,8 +1264,8 @@ button {
 }
 
 .admin-sidebar-logo img {
-  height: 40px;
-  width: 40px;
+  height: 60px;
+  width: 60px;
   object-fit: contain;
   border-radius: 50%;
 }
@@ -1503,8 +1503,8 @@ button {
 }
 
 .login-logo img {
-  height: 64px;
-  width: 64px;
+  height: 140px;
+  width: 140px;
   object-fit: contain;
   border-radius: 50%;
 }
