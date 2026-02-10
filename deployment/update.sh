@@ -71,15 +71,16 @@ cd $BACKEND_DIR
 # Check for package.json changes
 if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
   info "package.json changed, installing dependencies..."
-  npm install --production
+  npm install --omit=dev
 else
   info "No dependency changes detected"
 fi
 
 # Run migrations if exists
-if [ -f src/db/migrate.js ]; then
+if [ -f "src/db/migrate.js" ]; then
   info "Running database migrations..."
-  npm run migrate || warn "Migration failed or already applied"
+  # Use absolute node path and run from backend dir to ensure .env is found
+  node src/db/migrate.js || warn "Migration failed or already applied"
 fi
 
 # Restart backend
