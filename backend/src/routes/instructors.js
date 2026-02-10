@@ -15,12 +15,12 @@ router.get('/', async (req, res) => {
 
 router.post('/', authenticateAdmin, async (req, res) => {
   try {
-    const { name, specialty, experience_years, certifications, bio, hourly_rate, is_available = true } = req.body
+    const { name, specialty, experience_years, certifications, bio, hourly_rate, photo_url, is_available = true } = req.body
     if (!name) return res.status(400).json({ error: 'Namn krävs' })
     const result = await pool.query(
-      `INSERT INTO instructors (name,specialty,experience_years,certifications,bio,hourly_rate,is_available)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [name, specialty, experience_years || 0, certifications, bio, hourly_rate, is_available]
+      `INSERT INTO instructors (name,specialty,experience_years,certifications,bio,hourly_rate,photo_url,is_available)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [name, specialty, experience_years || 0, certifications, bio, hourly_rate, photo_url || null, is_available]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -30,7 +30,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 
 router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
-    const fields = ['name','specialty','experience_years','certifications','bio','hourly_rate','is_available','insurance_valid']
+    const fields = ['name','specialty','experience_years','certifications','bio','hourly_rate','is_available','insurance_valid','photo_url']
     const updates = []; const values = []; let i = 1
     for (const field of fields) {
       if (req.body[field] !== undefined) { updates.push(`${field} = $${i++}`); values.push(req.body[field]) }

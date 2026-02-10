@@ -54,6 +54,32 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Kurs, datum, tid och kontaktuppgifter krävs' })
     }
 
+    // Validera e-post
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Ogiltig e-postadress' })
+    }
+
+    // Validera datum
+    if (isNaN(Date.parse(booking_date))) {
+      return res.status(400).json({ error: 'Ogiltigt datum' })
+    }
+    if (new Date(booking_date) < new Date()) {
+      return res.status(400).json({ error: 'Bokningsdatum kan inte vara i det förflutna' })
+    }
+
+    // Sanitera strängar (trima whitespace, begränsa längd)
+    const safe = (s, max = 200) => String(s || '').trim().slice(0, max)
+    const sanitized = {
+      first_name: safe(first_name, 100),
+      last_name:  safe(last_name, 100),
+      email:      safe(email, 200).toLowerCase(),
+      phone:      safe(phone, 50),
+      notes:      safe(notes, 1000),
+    }
+
+    const participantCount = Math.max(1, Math.min(20, parseInt(participants) || 1))
+
     // Fetch course price
     const courseResult = await client.query('SELECT price FROM courses WHERE id = $1 AND is_active = true', [course_id])
     if (courseResult.rows.length === 0) return res.status(404).json({ error: 'Kurs hittades inte' })
@@ -78,16 +104,18 @@ router.post('/', async (req, res) => {
          (course_id, booking_date, booking_time, participants, total_price,
           first_name, last_name, email, phone, notes, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'confirmed') RETURNING *`,
-      [course_id, booking_date, booking_time, participants, totalPrice,
-       first_name, last_name, email, phone, notes]
+      [course_id, booking_date, booking_time, participantCount, totalPrice,
+       sanitized.first_name, sanitized.last_name, sanitized.email, sanitized.phone, sanitized.notes]
     )
     const booking = bookingResult.rows[0]
 
-    // Link equipment
+    // Link equipment with correct price
     for (const eqId of equipment_ids) {
+      const priceRow = await client.query('SELECT rental_price FROM equipment WHERE id = $1', [eqId])
+      const eqPrice = priceRow.rows[0]?.rental_price ?? 0
       await client.query(
-        'INSERT INTO booking_equipment (booking_id, equipment_id, price) VALUES ($1,$2,100)',
-        [booking.id, eqId]
+        'INSERT INTO booking_equipment (booking_id, equipment_id, price) VALUES ($1,$2,$3)',
+        [booking.id, eqId, eqPrice]
       )
     }
 

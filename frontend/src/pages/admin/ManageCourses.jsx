@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useCoursesStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input, Alert, LevelBadge } from '../../components/common/index.jsx'
 
@@ -13,6 +13,23 @@ export default function ManageCourses() {
   const [errors, setErrors] = useState({})
   const [alert,  setAlert]  = useState(null)
   const [saving, setSaving] = useState(false)
+  const [sortBy, setSortBy] = useState('name')
+  const [sortDir, setSortDir] = useState('asc')
+
+  const sorted = useMemo(() => {
+    return [...courses].sort((a, b) => {
+      let va = a[sortBy], vb = b[sortBy]
+      if (sortBy === 'price' || sortBy === 'duration') { va = parseFloat(va); vb = parseFloat(vb) }
+      else { va = String(va || '').toLowerCase(); vb = String(vb || '').toLowerCase() }
+      return sortDir === 'asc' ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1)
+    })
+  }, [courses, sortBy, sortDir])
+
+  const toggleSort = (col) => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(col); setSortDir('asc') }
+  }
+  const SortIcon = ({ col }) => sortBy === col ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ·'
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -71,11 +88,19 @@ export default function ManageCourses() {
         <Card>
           <table className="admin-table">
             <thead>
-              <tr><th>Namn</th><th>Nivå</th><th>Längd</th><th>Pris</th><th>Max</th><th>Status</th><th>Åtgärder</th></tr>
+              <tr>
+                <th style={{cursor:'pointer'}} onClick={() => toggleSort('name')}>Namn<SortIcon col="name"/></th>
+                <th style={{cursor:'pointer'}} onClick={() => toggleSort('level')}>Nivå<SortIcon col="level"/></th>
+                <th style={{cursor:'pointer'}} onClick={() => toggleSort('duration')}>Längd<SortIcon col="duration"/></th>
+                <th style={{cursor:'pointer'}} onClick={() => toggleSort('price')}>Pris<SortIcon col="price"/></th>
+                <th>Max</th>
+                <th style={{cursor:'pointer'}} onClick={() => toggleSort('is_active')}>Status<SortIcon col="is_active"/></th>
+                <th>Åtgärder</th>
+              </tr>
             </thead>
             <tbody>
-              {courses.length === 0 && <tr><td colSpan={7} className="empty">Inga kurser ännu</td></tr>}
-              {courses.map((c) => (
+              {sorted.length === 0 && <tr><td colSpan={7} className="empty">Inga kurser ännu</td></tr>}
+              {sorted.map((c) => (
                 <tr key={c.id}>
                   <td><strong>{c.name}</strong></td>
                   <td><LevelBadge level={c.level} /></td>

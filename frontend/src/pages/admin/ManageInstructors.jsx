@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useInstructorsStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input, Alert } from '../../components/common/index.jsx'
 
-const EMPTY = { name:'', specialty:'', experience_years:0, certifications:'', bio:'', hourly_rate:'', is_available:true }
+const EMPTY = { name:'', specialty:'', experience_years:0, certifications:'', bio:'', hourly_rate:'', photo_url:'', is_available:true }
 
 export default function ManageInstructors() {
   const { instructors, fetch, create, update, remove, loading } = useInstructorsStore()
@@ -48,7 +48,10 @@ export default function ManageInstructors() {
           {instructors.length === 0 && <p className="empty">Inga instruktörer ännu</p>}
           {instructors.map((inst) => (
             <Card key={inst.id} className="instructor-card">
-              <div className="instructor-avatar">{inst.name.charAt(0)}</div>
+              {inst.photo_url
+                ? <img src={inst.photo_url} alt={inst.name} className="instructor-avatar" style={{objectFit:'cover'}} />
+                : <div className="instructor-avatar">{inst.name.charAt(0)}</div>
+              }
               <h3>{inst.name}</h3>
               <p className="instructor-specialty">{inst.specialty}</p>
               <p style={{fontSize:'0.875rem',color:'var(--gray-600)'}}>{inst.bio}</p>
@@ -76,6 +79,13 @@ export default function ManageInstructors() {
         <div className="form-group">
           <label className="form-label">Bio</label>
           <textarea className="form-input form-textarea" rows={3} value={form.bio} onChange={(e) => set('bio', e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Profilbild (URL)</label>
+          <input className="form-input" value={form.photo_url || ''} onChange={(e) => set('photo_url', e.target.value)} placeholder="https://..." />
+          {form.photo_url && (
+            <img src={form.photo_url} alt="Förhandsgranskning" style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',marginTop:'0.5rem',border:'2px solid var(--gray-200)'}} />
+          )}
         </div>
         <div className="form-group" style={{display:'flex',alignItems:'center',gap:'0.5rem'}}>
           <input type="checkbox" id="inst_avail" checked={form.is_available} onChange={(e) => set('is_available', e.target.checked)} />

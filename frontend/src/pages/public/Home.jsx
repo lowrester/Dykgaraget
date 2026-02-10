@@ -9,60 +9,115 @@ export default function Home() {
 
   return (
     <div className="page-home">
+
+      {/* ── Hero ─────────────────────────────────────────── */}
       <section className="hero">
-        <div className="hero-content">
-          <h1 className="hero-title">Dyk in i en ny värld</h1>
-          <p className="hero-subtitle">Professionell dykutbildning av PADI-certifierade instruktörer. Oavsett nivå har vi rätt kurs för dig.</p>
-          <div className="hero-actions">
-            <Link to="/bokning"        className="btn btn-primary btn-lg">Boka kurs</Link>
-            <Link to="/certifieringar" className="btn btn-outline btn-lg">Se alla kurser</Link>
+        <div className="container">
+          <div className="hero-content">
+            <div className="hero-eyebrow">🤿 PADI-certifierad dykskola</div>
+            <h1 className="hero-title">
+              Din guide till<br />dykning i Sverige
+            </h1>
+            <p className="hero-subtitle">
+              Professionell dykutbildning med PADI-certifierade instruktörer.
+              Oavsett nivå — från första dyket till divemaster.
+            </p>
+            <div className="hero-actions">
+              <Link to="/bokning"        className="btn btn-primary btn-lg">Boka kurs</Link>
+              <Link to="/certifieringar" className="btn btn-secondary btn-lg">Se certifieringar →</Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="stats-bar">
+      {/* ── Stats Bar ────────────────────────────────────── */}
+      <div className="stats-bar">
         <div className="container stats-grid">
-          <div className="stat"><span className="stat-number">500+</span><span className="stat-label">Nöjda elever</span></div>
-          <div className="stat"><span className="stat-number">12</span><span className="stat-label">År av erfarenhet</span></div>
-          <div className="stat"><span className="stat-number">3</span><span className="stat-label">Certifierade instruktörer</span></div>
-          <div className="stat"><span className="stat-number">PADI</span><span className="stat-label">Certifierad skola</span></div>
+          <div className="stat">
+            <span className="stat-number">500+</span>
+            <span className="stat-label">Nöjda elever</span>
+          </div>
+          <div className="stat">
+            <span className="stat-number">12</span>
+            <span className="stat-label">År av erfarenhet</span>
+          </div>
+          <div className="stat">
+            <span className="stat-number">PADI</span>
+            <span className="stat-label">Certifierad</span>
+          </div>
+          <div className="stat">
+            <span className="stat-number">546513</span>
+            <span className="stat-label">Instruktörsnr</span>
+          </div>
         </div>
-      </section>
+      </div>
 
+      {/* ── Populära kurser ───────────────────────────────── */}
       <section className="section">
         <div className="container">
-          <h2 className="section-title">Populära kurser</h2>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.25rem' }}>
+            <h2 className="section-title" style={{marginBottom:0}}>Populära kurser</h2>
+            <Link to="/certifieringar" className="btn btn-ghost btn-sm">Visa alla →</Link>
+          </div>
+
           {loading ? <Spinner /> : (
             <div className="grid grid-3">
-              {courses.slice(0, 3).map((course) => (
+              {courses.filter(c => c.is_active).slice(0, 3).map((course) => (
                 <Card key={course.id} className="course-card">
                   <div className="course-card-header">
                     <LevelBadge level={course.level} />
                     <span className="course-duration">{course.duration} dag{course.duration > 1 ? 'ar' : ''}</span>
                   </div>
-                  <h3>{course.name}</h3>
+                  <h3 style={{ fontWeight:700, fontSize:'1rem', letterSpacing:'-0.02em', margin:'0.5rem 0 0' }}>{course.name}</h3>
                   <p className="course-desc">{course.description}</p>
                   <div className="course-footer">
                     <span className="course-price">{parseFloat(course.price).toLocaleString('sv-SE')} kr</span>
-                    <Link to="/bokning" className="btn btn-sm btn-primary">Boka</Link>
+                    <Link to="/bokning" className="btn btn-primary btn-sm">Boka</Link>
                   </div>
                 </Card>
               ))}
             </div>
           )}
-          <div className="section-cta">
-            <Link to="/certifieringar" className="btn btn-outline">Se alla certifieringar →</Link>
+        </div>
+      </section>
+
+      {/* ── Varför Dykgaraget ────────────────────────────── */}
+      <section style={{ background:'var(--gray-50)', borderTop:'1px solid var(--gray-200)', borderBottom:'1px solid var(--gray-200)', padding:'3.5rem 0' }}>
+        <div className="container">
+          <h2 className="section-title" style={{textAlign:'center'}}>Så fungerar det</h2>
+          <div className="grid grid-4" style={{marginTop:'1.5rem'}}>
+            {[
+              { icon:'🏊', title:'Välj kurs',     desc:'Från nybörjarkurs till avancerade specialkurser för erfarna dykare.' },
+              { icon:'📅', title:'Boka enkelt',   desc:'Välj datum och antal platser direkt online. Bekräftelse via e-post.' },
+              { icon:'🤿', title:'Dyk och lär',   desc:'Teorilektioner, poolövningar och öppet vatten under guidning.' },
+              { icon:'🎓', title:'Certifikat',    desc:'PADI-certifiering som gäller livet ut och accepteras världen över.' },
+            ].map(item => (
+              <div key={item.title} style={{ textAlign:'center', padding:'1rem' }}>
+                <div style={{ fontSize:'2rem', marginBottom:'0.75rem' }}>{item.icon}</div>
+                <h3 style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--gray-900)', marginBottom:'0.4rem', letterSpacing:'-0.02em' }}>{item.title}</h3>
+                <p style={{ fontSize:'0.82rem', color:'var(--gray-500)', lineHeight:1.6 }}>{item.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="cta-section">
-        <div className="container cta-inner">
-          <h2>Redo att börja dyka?</h2>
-          <p>Boka din kurs idag och ta första steget ut i det blå.</p>
-          <Link to="/bokning" className="btn btn-primary btn-lg">Boka nu</Link>
+      {/* ── CTA ──────────────────────────────────────────── */}
+      <section className="section">
+        <div className="container">
+          <div className="cta-section">
+            <div className="cta-inner">
+              <h2>Redo att börja dyka?</h2>
+              <p>Boka din kurs idag och ta första steget ut i det blå.</p>
+              <div style={{ display:'flex', gap:'0.6rem', justifyContent:'center', flexWrap:'wrap' }}>
+                <Link to="/bokning"        className="btn btn-primary btn-lg">Boka nu</Link>
+                <Link to="/certifieringar" className="btn btn-outline btn-lg">Se kurser</Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+
     </div>
   )
 }

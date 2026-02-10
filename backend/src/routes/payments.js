@@ -7,8 +7,8 @@ dotenv.config()
 const router = express.Router()
 router.use(checkFeature('payment'))
 
-// POST /api/payments/create-checkout
-router.post('/create-checkout', async (req, res) => {
+// POST /api/payments/create-checkout  (admin only)
+router.post('/create-checkout', authenticateAdmin, async (req, res) => {
   try {
     const { invoice_id } = req.body
     if (!invoice_id) return res.status(400).json({ error: 'invoice_id krävs' })

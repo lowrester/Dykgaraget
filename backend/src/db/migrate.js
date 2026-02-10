@@ -1,4 +1,5 @@
 import { pool } from './connection.js'
+import bcrypt from 'bcrypt'
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -83,6 +84,7 @@ async function run() {
         bio                  TEXT,
         is_available         BOOLEAN       DEFAULT true,
         certification_number VARCHAR(100),
+        photo_url            TEXT,
         certification_expiry DATE,
         hourly_rate          NUMERIC(10,2),
         insurance_valid      BOOLEAN       DEFAULT true,
@@ -213,15 +215,30 @@ async function run() {
       )
     }
 
-    // ── Seed: admin user (password: Admin123!) ────────────────
-    // Hash pre-generated with bcrypt rounds=10
-    await client.query(`
-      INSERT INTO users (username,email,password_hash,first_name,last_name,role)
-      VALUES ('admin','admin@dykgaraget.se',
-              '$2b$10$rQv8P3mYXGHkL9wN2xKzOeP1sT4uV7yA0bC6dF8gH2iJ5kM3nO9pQ',
-              'Admin','Dykgaraget','admin')
-      ON CONFLICT (username) DO NOTHING
-    `)
+    // ── Seed: admin user ──────────────────────────────────────
+    // Generera riktig bcrypt-hash vid körning (lösenord: Admin123!)
+    const adminPw = process.env.ADMIN_PASSWORD || 'Admin123!'
+    const adminHash = await bcrypt.hash(adminPw, 10)
+    // Kolla om admin redan finns MED en riktig hash (dvs inte default-hashen)
+    const existing = await client.query(
+      "SELECT id, password_hash FROM users WHERE username = 'admin'"
+    )
+    if (existing.rows.length === 0) {
+      // Ingen admin — skapa
+      await client.query(
+        `INSERT INTO users (username,email,password_hash,first_name,last_name,role)
+         VALUES ($1,$2,$3,'Admin','Dykgaraget','admin')`,
+        ['admin', 'admin@dykgaraget.se', adminHash]
+      )
+      console.log(`✅ Admin skapad: admin / ${adminPw}`)
+    } else {
+      // Admin finns — uppdatera alltid hash (migrate körs vid ny deploy)
+      await client.query(
+        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE username = $2',
+        [adminHash, 'admin']
+      )
+      console.log(`✅ Admin-lösenord uppdaterat: admin / ${adminPw}`)
+    }
 
     // ── Seed: courses ─────────────────────────────────────────
     const courses = [
@@ -276,7 +293,12 @@ async function run() {
     }
 
     await client.query('COMMIT')
+    console.log('')
     console.log('✅ Migrations complete')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log(`🔐 Admin login: admin / ${adminPw}`)
+    console.log('🌐 Admin URL:   /admin/login')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   } catch (err) {
     await client.query('ROLLBACK')
     console.error('❌ Migration failed:', err.message)

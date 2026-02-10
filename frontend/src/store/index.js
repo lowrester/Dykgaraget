@@ -1,12 +1,25 @@
 import { create } from 'zustand'
-import client, { setToken, clearToken } from '../api/client.js'
+import client, { setToken, clearToken, loadToken } from '../api/client.js'
 
-// ── Auth store (no localStorage – token lives in memory only) ─
+// ── Auth store ─────────────────────────────────────────────────
 export const useAuthStore = create((set) => ({
   user:    null,
   token:   null,
   loading: false,
   error:   null,
+
+  // Körs vid app-start: återställ session om token finns i sessionStorage
+  initAuth: async () => {
+    const stored = loadToken()
+    if (!stored) return
+    try {
+      const data = await client.get('/auth/me')
+      set({ user: data.user, token: stored })
+    } catch {
+      // Token ogiltig (utgången eller server omstartad) — rensa
+      clearToken()
+    }
+  },
 
   login: async (username, password) => {
     set({ loading: true, error: null })
@@ -24,9 +37,13 @@ export const useAuthStore = create((set) => ({
     clearToken()
     set({ user: null, token: null })
   },
+
+  changePassword: async (currentPassword, newPassword) => {
+    return await client.post('/auth/change-password', { currentPassword, newPassword })
+  },
 }))
 
-// ── Settings / feature flags store ────────────────────────────
+// ── Settings / feature flags store ───────────────────────────
 export const useSettingsStore = create((set, get) => ({
   features: {
     equipment: true,
@@ -42,7 +59,7 @@ export const useSettingsStore = create((set, get) => ({
     try {
       const data = await client.get('/settings/features')
       set({ features: data })
-    } catch { /* use defaults */ }
+    } catch { /* använd defaults om API är nere */ }
   },
 
   fetchSettings: async () => {
@@ -57,7 +74,6 @@ export const useSettingsStore = create((set, get) => ({
 
   updateSetting: async (key, value) => {
     const data = await client.put(`/settings/${key}`, { value })
-    // Refresh features if a feature flag was toggled
     if (key.startsWith('feature_')) await get().fetchFeatures()
     return data
   },
@@ -227,6 +243,7 @@ export const useInvoicesStore = create((set) => ({
   },
 
   downloadPdf: (id) => {
-    window.open(`${import.meta.env.VITE_API_URL || '/api'}/invoices/${id}/pdf`, '_blank')
+    const base = import.meta.env.VITE_API_URL || '/api'
+    window.open(`${base}/invoices/${id}/pdf`, '_blank')
   },
 }))

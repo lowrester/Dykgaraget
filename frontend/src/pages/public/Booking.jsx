@@ -7,7 +7,7 @@ const STEPS = ['Välj kurs', 'Dina uppgifter', 'Utrustning', 'Bekräftelse']
 export default function Booking() {
   const [step, setStep]         = useState(0)
   const [form, setForm]         = useState({
-    course_id: '', booking_date: '', booking_time: '09:00',
+    course_id: '', booking_date: '', booking_time: '09:00', participants: 1,
     first_name: '', last_name: '', email: '', phone: '',
     equipment_ids: [], notes: '',
   })
@@ -62,6 +62,7 @@ export default function Booking() {
         course_id:     parseInt(form.course_id),
         booking_date:  form.booking_date,
         booking_time:  form.booking_time,
+        participants:  parseInt(form.participants) || 1,
         first_name:    form.first_name,
         last_name:     form.last_name,
         email:         form.email,
@@ -89,7 +90,7 @@ export default function Booking() {
           <p>Tack {success?.first_name}! Din bokning är registrerad.</p>
           <p>Bokningsnummer: <strong>#{success?.id}</strong></p>
           <p>Bekräftelse skickas till <strong>{success?.email}</strong></p>
-          <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id:'',booking_date:'',booking_time:'09:00',first_name:'',last_name:'',email:'',phone:'',equipment_ids:[],notes:'' }) }}>
+          <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id:'',booking_date:'',booking_time:'09:00',participants:1,first_name:'',last_name:'',email:'',phone:'',equipment_ids:[],notes:'' }) }}>
             Gör en ny bokning
           </button>
         </div>
@@ -120,7 +121,11 @@ export default function Booking() {
               <label className="form-label">Kurs *</label>
               {errors.course_id && <span className="error-msg">{errors.course_id}</span>}
               <div className="course-select-grid">
-                {courses.filter(c => c.is_active).map((course) => (
+                {courses.filter(c => c.is_active).length === 0 ? (
+                  <p style={{color:'var(--gray-400)',fontStyle:'italic',gridColumn:'1/-1',padding:'1rem 0'}}>
+                    Inga kurser tillgängliga för tillfället. Kontakta oss direkt.
+                  </p>
+                ) : courses.filter(c => c.is_active).map((course) => (
                   <div
                     key={course.id}
                     className={`course-option ${form.course_id === String(course.id) ? 'selected' : ''}`}
@@ -136,6 +141,7 @@ export default function Booking() {
             <div className="grid grid-2">
               <Input label="Datum" type="date" value={form.booking_date} onChange={(e) => set('booking_date', e.target.value)} error={errors.booking_date} required min={new Date().toISOString().split('T')[0]} />
               <Input label="Tid" type="time" value={form.booking_time} onChange={(e) => set('booking_time', e.target.value)} />
+              <Input label="Antal deltagare" type="number" min={1} max={10} value={form.participants} onChange={(e) => set('participants', e.target.value)} />
             </div>
           </div>
         )}
@@ -167,7 +173,7 @@ export default function Booking() {
               <Spinner text="Hämtar utrustning..." />
             ) : (
               <>
-                <p className="step-desc">Välj den utrustning du vill hyra (100 kr/dag per artikel).</p>
+                <p className="step-desc">Välj utrustning att hyra. Pris visas per artikel och dag.</p>
                 <div className="equipment-grid">
                   {equipment.map((item) => (
                     <div
@@ -193,7 +199,9 @@ export default function Booking() {
             {errors.submit && <Alert type="error">{errors.submit}</Alert>}
             <div className="summary">
               <div className="summary-row"><span>Kurs:</span><strong>{selectedCourse?.name}</strong></div>
-              <div className="summary-row"><span>Datum:</span><strong>{form.booking_date} kl {form.booking_time}</strong></div>
+              <div className="summary-row"><span>Datum:</span><strong>{form.booking_date}</strong></div>
+              <div className="summary-row"><span>Tid:</span><strong>kl {form.booking_time}</strong></div>
+              <div className="summary-row"><span>Deltagare:</span><strong>{form.participants}</strong></div>
               <div className="summary-row"><span>Namn:</span><strong>{form.first_name} {form.last_name}</strong></div>
               <div className="summary-row"><span>E-post:</span><strong>{form.email}</strong></div>
               {form.phone && <div className="summary-row"><span>Telefon:</span><strong>{form.phone}</strong></div>}

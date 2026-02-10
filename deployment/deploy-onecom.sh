@@ -165,7 +165,13 @@ if [ -f .env ]; then
   warn ".env finns redan — behålls ✓"
 else
   cp .env.example .env
-  warn "⚠  Ny .env skapad — redigera $BACKEND_DIR/.env innan du startar!"
+  # Generera ett säkert JWT_SECRET automatiskt
+  JWT_AUTO=$(openssl rand -base64 48 2>/dev/null || cat /dev/urandom | tr -dc 'a-zA-Z0-9' | head -c 64)
+  sed -i "s|BYTA_UT_DETTA_TILL_MINST_32_SLUMPMÄSSIGA_TECKEN|${JWT_AUTO}|g" .env
+  sed -i "s|your_jwt_secret_minimum_32_characters_long|${JWT_AUTO}|g" .env
+  info "✓ JWT_SECRET genererat automatiskt"
+  warn "⚠  Ny .env skapad med auto-genererad JWT_SECRET"
+  warn "⚠  Redigera $BACKEND_DIR/.env och sätt: DB_PASSWORD, ADMIN_PASSWORD"
 fi
 
 info "Skapar upload-katalog ..."
@@ -173,7 +179,13 @@ mkdir -p uploads/invoices
 chown -R www-data:www-data uploads
 
 info "Kör databasmigreringar ..."
-npm run migrate 2>/dev/null || warn "Migrering misslyckades eller redan utförd"
+info "Kör databasmigreringar ..."
+if npm run migrate; then
+  info "Migreringar klara ✓"
+else
+  warn "⚠ Migreringar misslyckades - kontrollera DB-anslutningen och kör manuellt:"
+  warn "  cd $BACKEND_DIR && npm run migrate"
+fi
 
 # PM2 – restart om den körs, annars start
 if pm2 list | grep -q "dykgaraget-api"; then

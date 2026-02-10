@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useEquipmentStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input, Alert } from '../../components/common/index.jsx'
 
-const EMPTY = { name:'', category:'Wetsuit', size:'', quantity_total:1, rental_price:100, condition:'god', is_active:true }
+const EMPTY = { name:'', category:'Wetsuit', size:'', quantity_total:1, quantity_available:1, rental_price:100, condition:'god', is_active:true }
 const CATS  = ['Wetsuit','BCD','Mask','Regulator','Computer','Fenor','Torrdräkt','Övrigt']
 
 export default function ManageEquipment() {
@@ -23,7 +23,7 @@ export default function ManageEquipment() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const payload = { ...form, quantity_total: parseInt(form.quantity_total), rental_price: parseFloat(form.rental_price) }
+      const payload = { ...form, quantity_total: parseInt(form.quantity_total), quantity_available: parseInt(form.quantity_available ?? form.quantity_total), rental_price: parseFloat(form.rental_price) }
       if (editing) await update(editing.id, payload)
       else         await create(payload)
       setAlert({ type:'success', msg: editing ? 'Uppdaterad!' : 'Skapad!' })
@@ -77,7 +77,8 @@ export default function ManageEquipment() {
             </select>
           </div>
           <Input label="Storlek" value={form.size} onChange={(e) => set('size', e.target.value)} placeholder="S, M, L, 40-43 ..." />
-          <Input label="Antal" type="number" min={1} value={form.quantity_total} onChange={(e) => set('quantity_total', e.target.value)} />
+          <Input label="Totalt antal" type="number" min={1} value={form.quantity_total} onChange={(e) => set('quantity_total', e.target.value)} />
+          <Input label="Tillgängligt antal" type="number" min={0} max={form.quantity_total} value={form.quantity_available ?? form.quantity_total} onChange={(e) => set('quantity_available', e.target.value)} />
           <Input label="Hyra/dag (kr)" type="number" min={0} value={form.rental_price} onChange={(e) => set('rental_price', e.target.value)} />
           <div className="form-group" style={{display:'flex',alignItems:'center',gap:'0.5rem',paddingTop:'1.5rem'}}>
             <input type="checkbox" id="eq_active" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} />

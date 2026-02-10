@@ -14,8 +14,9 @@ BACKEND_DIR="$APP_DIR/backend"
 FRONTEND_DIR="$APP_DIR/frontend"
 DB_NAME="dykgaraget"
 DB_USER="dykgaraget_user"
-# Random passwords/secrets generated at runtime
-DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9')
+
+# Auto-generate secure secrets
+DB_PASSWORD=$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9')
 JWT_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9')
 NGINX_CONF="/etc/nginx/sites-available/dykgaraget"
 
@@ -99,26 +100,26 @@ else
 fi
 
 # Check if database exists
-if sudo -u postgres -i psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
+if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
   warn "Database '$DB_NAME' already exists, skipping creation"
 else
   info "Creating database '$DB_NAME'..."
-  sudo -u postgres -i psql << EOFDB
+  sudo -u postgres psql << EOFDB
 CREATE DATABASE $DB_NAME;
 EOFDB
 fi
 
 # Check if user exists
-if sudo -u postgres -i psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
-  info "Database user '$DB_USER' already exists, updating password to match generated secret..."
-  sudo -u postgres -i psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+if sudo -u postgres psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
+  warn "Database user '$DB_USER' already exists, skipping creation"
 else
   info "Creating database user '$DB_USER'..."
-  sudo -u postgres -i psql << EOFDB
+  sudo -u postgres psql << EOFDB
 CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
 GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
 EOFDB
-  info "Database user created with a secure random password ✓"
+  warn "⚠️  Default DB password set! Change it immediately:"
+  echo "   sudo -u postgres psql -c \"ALTER USER $DB_USER WITH PASSWORD 'your_secure_password';\""
 fi
 
 # ========== STEP 4: Application Directory ==========
@@ -167,14 +168,7 @@ if [ -f .env ]; then
 else
   info "Creating .env file from example..."
   cp .env.example .env
-  
-  # Inject generated secrets
-  sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" .env
-  sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
-  sed -i "s/DB_USER=.*/DB_USER=$DB_USER/" .env
-  sed -i "s/DB_NAME=.*/DB_NAME=$DB_NAME/" .env
-  
-  info "Injected generated passwords and secrets into $BACKEND_DIR/.env ✓"
+  warn "⚠️  Please edit $BACKEND_DIR/.env with your configuration!"
 fi
 
 # Run migrations
@@ -338,14 +332,17 @@ echo "   Frontend .env: $FRONTEND_DIR/.env"
 echo "   Nginx config: $NGINX_CONF"
 echo ""
 echo "🔐 Security Checklist:"
-echo "   [x] Database password generated automatically"
-echo "   [x] JWT_SECRET generated automatically"
+echo "   [ ] Change database password"
+echo "   [ ] Edit backend .env (JWT_SECRET, API keys)"
+echo "   [ ] Edit frontend .env (API_URL)"
 echo "   [ ] Setup SSL with: certbot --nginx -d dykgaraget.se"
 echo "   [ ] Configure firewall: ufw allow 22,80,443"
 echo ""
 echo "📝 Next Steps:"
-echo "   1. Review configuration: cat $BACKEND_DIR/.env"
-echo "   2. Test the API: curl http://localhost/api/health"
+echo "   1. Edit configuration: nano $BACKEND_DIR/.env"
+echo "   2. Change DB password: sudo -u postgres psql"
+echo "   3. Restart backend: pm2 restart dykgaraget-api"
+echo "   4. Test: curl http://localhost/api/health"
 echo ""
 echo "🔄 To update: cd $APP_DIR && ./deployment/update.sh"
 echo ""
