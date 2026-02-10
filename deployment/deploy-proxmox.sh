@@ -157,13 +157,20 @@ else
   info "Creating .env file from example..."
   cp .env.example .env
   
-  # Inject generated secrets
+  # Inject generated secrets and URLs
+  SERVER_IP=$(hostname -I | awk '{print $1}')
+  info "Detected server IP: $SERVER_IP"
+  
   sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" .env
   sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
   sed -i "s/DB_USER=.*/DB_USER=$DB_USER/" .env
   sed -i "s/DB_NAME=.*/DB_NAME=$DB_NAME/" .env
   
-  info "Injected generated passwords and secrets into $BACKEND_DIR/.env ✓"
+  # Set production URLs based on IP
+  sed -i "s|FRONTEND_URL=.*|FRONTEND_URL=http://$SERVER_IP|" .env
+  sed -i "s|API_URL=.*|API_URL=http://$SERVER_IP/api|" .env
+  
+  info "Injected generated passwords, secrets and dynamic URLs ($SERVER_IP) into $BACKEND_DIR/.env ✓"
 fi
 
 # Run migrations
@@ -216,6 +223,10 @@ if [ -f .env ]; then
 else
   info "Creating .env file from example..."
   cp .env.example .env
+  
+  # Inject API URL
+  sed -i "s|VITE_API_URL=.*|VITE_API_URL=/api|" .env
+  info "Injected VITE_API_URL=/api into $FRONTEND_DIR/.env ✓"
 fi
 
 # Build frontend

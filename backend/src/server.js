@@ -1,23 +1,23 @@
 import express from 'express'
-import cors    from 'cors'
-import helmet  from 'helmet'
+import cors from 'cors'
+import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
-import dotenv  from 'dotenv'
+import dotenv from 'dotenv'
 import { pool } from './db/connection.js'
 
-import authRoutes        from './routes/auth.js'
-import coursesRoutes     from './routes/courses.js'
-import equipmentRoutes   from './routes/equipment.js'
+import authRoutes from './routes/auth.js'
+import coursesRoutes from './routes/courses.js'
+import equipmentRoutes from './routes/equipment.js'
 import instructorsRoutes from './routes/instructors.js'
-import bookingsRoutes    from './routes/bookings.js'
-import invoicesRoutes    from './routes/invoices.js'
-import paymentsRoutes    from './routes/payments.js'
-import settingsRoutes    from './routes/settings.js'
-import contactRoutes     from './routes/contact.js'
+import bookingsRoutes from './routes/bookings.js'
+import invoicesRoutes from './routes/invoices.js'
+import paymentsRoutes from './routes/payments.js'
+import settingsRoutes from './routes/settings.js'
+import contactRoutes from './routes/contact.js'
 
 dotenv.config()
 
-const app  = express()
+const app = express()
 const PORT = process.env.PORT || 3000
 
 // ── Trust proxy (krävs bakom nginx/one.com) ──────────────────
@@ -30,15 +30,17 @@ app.use(helmet({
 }))
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:5173',
   'http://localhost:3000',
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim()) : [])
 ]
 app.use(cors({
   origin: (origin, cb) => {
     // Tillåt requests utan origin (curl, Postman, server-till-server)
     if (!origin) return cb(null, true)
+    // Exakt match eller kollar listan
     if (allowedOrigins.includes(origin)) return cb(null, true)
+
     cb(new Error(`CORS: ${origin} ej tillåten`))
   },
   credentials: true,
@@ -74,10 +76,10 @@ app.get('/api/health', async (_req, res) => {
   try {
     const result = await pool.query('SELECT NOW() AS time')
     res.json({
-      status:    'healthy',
+      status: 'healthy',
       timestamp: result.rows[0].time,
-      version:   '1.0.0',
-      env:       process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      env: process.env.NODE_ENV || 'development',
     })
   } catch (err) {
     res.status(503).json({ status: 'unhealthy', error: err.message })
@@ -85,15 +87,15 @@ app.get('/api/health', async (_req, res) => {
 })
 
 // ── Routes ────────────────────────────────────────────────────
-app.use('/api/auth',        authRoutes)
-app.use('/api/courses',     coursesRoutes)
-app.use('/api/equipment',   equipmentRoutes)
+app.use('/api/auth', authRoutes)
+app.use('/api/courses', coursesRoutes)
+app.use('/api/equipment', equipmentRoutes)
 app.use('/api/instructors', instructorsRoutes)
-app.use('/api/bookings',    bookingsRoutes)
-app.use('/api/invoices',    invoicesRoutes)
-app.use('/api/payments',    paymentsRoutes)
-app.use('/api/settings',    settingsRoutes)
-app.use('/api/contact',     contactRoutes)
+app.use('/api/bookings', bookingsRoutes)
+app.use('/api/invoices', invoicesRoutes)
+app.use('/api/payments', paymentsRoutes)
+app.use('/api/settings', settingsRoutes)
+app.use('/api/contact', contactRoutes)
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use('/api/*', (_req, res) => {
