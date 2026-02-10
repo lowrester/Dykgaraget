@@ -101,20 +101,20 @@ fi
 
 # Create database and user
 info "Creating database and user..."
-sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;" 2>/dev/null || warn "Database '$DB_NAME' already exists, skipping creation"
+(cd /tmp && sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;" 2>/dev/null) || warn "Database '$DB_NAME' already exists, skipping creation"
 
 # Create or update user password
-if sudo -u postgres psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
+if (cd /tmp && sudo -u postgres psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER); then
   info "Database user '$DB_USER' already exists, updating password to match generated secret..."
-  sudo -u postgres psql -c "ALTER ROLE $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+  (cd /tmp && sudo -u postgres psql -c "ALTER ROLE $DB_USER WITH PASSWORD '$DB_PASSWORD';")
 else
   info "Creating database user '$DB_USER'..."
-  sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+  (cd /tmp && sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';")
 fi
 
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+(cd /tmp && sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;")
 # In Postgres 15+, grant on public schema is required for migrations
-sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;" 2>/dev/null || true
+(cd /tmp && sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;" 2>/dev/null) || true
 
 # ========== STEP 4: Application Directory ==========
 step "4/8 Setting up application directory..."
