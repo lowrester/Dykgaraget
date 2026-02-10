@@ -99,40 +99,28 @@ else
   info "PostgreSQL already installed ✓"
 fi
 
-# Check if database exists
-if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw $DB_NAME; then
-  warn "Database '$DB_NAME' already exists, skipping creation"
-else
-  info "Creating database '$DB_NAME'..."
-  sudo -u postgres psql << EOFDB
-CREATE DATABASE $DB_NAME;
-EOFDB
-fi
+# Create database and user
+info "Creating database and user..."
+sudo -u postgres psql -c "CREATE DATABASE $DB_NAME;" 2>/dev/null || warn "Database '$DB_NAME' already exists, skipping creation"
 
-# Check if user exists
+# Create or update user password
 if sudo -u postgres psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
-  warn "Database user '$DB_USER' already exists, skipping creation"
+  info "Database user '$DB_USER' already exists, updating password to match generated secret..."
+  sudo -u postgres psql -c "ALTER ROLE $DB_USER WITH PASSWORD '$DB_PASSWORD';"
 else
   info "Creating database user '$DB_USER'..."
-  sudo -u postgres psql << EOFDB
-CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
-EOFDB
-  warn "⚠️  Default DB password set! Change it immediately:"
-  echo "   sudo -u postgres psql -c \"ALTER USER $DB_USER WITH PASSWORD 'your_secure_password';\""
+  sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
 fi
+
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
+# In Postgres 15+, grant on public schema is required for migrations
+sudo -u postgres psql -d $DB_NAME -c "GRANT ALL ON SCHEMA public TO $DB_USER;" 2>/dev/null || true
 
 # ========== STEP 4: Application Directory ==========
 step "4/8 Setting up application directory..."
 
 if [ -d "$APP_DIR" ]; then
   warn "Application directory already exists: $APP_DIR"
-  read -p "Continue and overwrite? (y/n) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    error "Deployment cancelled"
-    exit 1
-  fi
   info "Backing up existing installation..."
   BACKUP_DIR="${APP_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
   cp -r $APP_DIR $BACKUP_DIR
@@ -168,7 +156,14 @@ if [ -f .env ]; then
 else
   info "Creating .env file from example..."
   cp .env.example .env
-  warn "⚠️  Please edit $BACKEND_DIR/.env with your configuration!"
+  
+  # Inject generated secrets
+  sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" .env
+  sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
+  sed -i "s/DB_USER=.*/DB_USER=$DB_USER/" .env
+  sed -i "s/DB_NAME=.*/DB_NAME=$DB_NAME/" .env
+  
+  info "Injected generated passwords and secrets into $BACKEND_DIR/.env ✓"
 fi
 
 # Run migrations
@@ -332,17 +327,14 @@ echo "   Frontend .env: $FRONTEND_DIR/.env"
 echo "   Nginx config: $NGINX_CONF"
 echo ""
 echo "🔐 Security Checklist:"
-echo "   [ ] Change database password"
-echo "   [ ] Edit backend .env (JWT_SECRET, API keys)"
-echo "   [ ] Edit frontend .env (API_URL)"
+echo "   [x] Database password generated automatically"
+echo "   [x] JWT_SECRET generated automatically"
 echo "   [ ] Setup SSL with: certbot --nginx -d dykgaraget.se"
 echo "   [ ] Configure firewall: ufw allow 22,80,443"
 echo ""
 echo "📝 Next Steps:"
-echo "   1. Edit configuration: nano $BACKEND_DIR/.env"
-echo "   2. Change DB password: sudo -u postgres psql"
-echo "   3. Restart backend: pm2 restart dykgaraget-api"
-echo "   4. Test: curl http://localhost/api/health"
+echo "   1. Review configuration: cat $BACKEND_DIR/.env"
+echo "   2. Test the API: curl http://localhost/api/health"
 echo ""
 echo "🔄 To update: cd $APP_DIR && ./deployment/update.sh"
 echo ""
