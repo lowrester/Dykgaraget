@@ -19,6 +19,9 @@ DB_PASSWORD=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9')
 JWT_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9')
 NGINX_CONF="/etc/nginx/sites-available/dykgaraget"
 
+# Capture source root (parent of deployment directory)
+SOURCE_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
 info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; }
@@ -142,16 +145,15 @@ fi
 step "5/8 Deploying backend..."
 
 # Check if backend source exists
-if [ ! -d "../backend" ]; then
-  error "Backend source directory not found!"
-  error "Make sure you're running this from the deployment/ directory"
+if [ ! -d "$SOURCE_ROOT/backend" ]; then
+  error "Backend source directory not found at $SOURCE_ROOT/backend"
   exit 1
 fi
 
 # Copy backend files
 info "Copying backend files..."
 rm -rf $BACKEND_DIR
-cp -r ../backend $BACKEND_DIR
+cp -r "$SOURCE_ROOT/backend" $BACKEND_DIR
 
 cd $BACKEND_DIR
 
