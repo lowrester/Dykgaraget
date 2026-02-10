@@ -107,7 +107,8 @@ fi
 
 # Check if user exists
 if sudo -u postgres -i psql -t -c '\du' | cut -d \| -f 1 | grep -qw $DB_USER; then
-  warn "Database user '$DB_USER' already exists, skipping creation"
+  info "Database user '$DB_USER' already exists, updating password to match generated secret..."
+  sudo -u postgres -i psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
 else
   info "Creating database user '$DB_USER'..."
   sudo -u postgres -i psql << EOFDB
