@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuthStore } from '../store/index.js'
+import { useAuthStore } from '../../store/index.js'
 import { Button, Input, Alert } from '../components/common/index.jsx'
 
 export default function Login() {
