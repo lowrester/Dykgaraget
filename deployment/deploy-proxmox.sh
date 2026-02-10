@@ -152,26 +152,24 @@ npm install --omit=dev --quiet
 
 # Setup .env
 if [ -f .env ]; then
-  warn ".env file already exists, keeping it"
+  warn ".env file already exists, updating dynamic URLs..."
 else
   info "Creating .env file from example..."
   cp .env.example .env
   
-  # Inject generated secrets and URLs
-  SERVER_IP=$(hostname -I | awk '{print $1}')
-  info "Detected server IP: $SERVER_IP"
-  
+  # Inject generated secrets for first install
   sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" .env
   sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
   sed -i "s/DB_USER=.*/DB_USER=$DB_USER/" .env
   sed -i "s/DB_NAME=.*/DB_NAME=$DB_NAME/" .env
-  
-  # Set production URLs based on IP
-  sed -i "s|FRONTEND_URL=.*|FRONTEND_URL=http://$SERVER_IP|" .env
-  sed -i "s|API_URL=.*|API_URL=http://$SERVER_IP/api|" .env
-  
-  info "Injected generated passwords, secrets and dynamic URLs ($SERVER_IP) into $BACKEND_DIR/.env ✓"
 fi
+
+# ALWAYS update/sync production URLs based on current IP
+SERVER_IP=$(hostname -I | awk '{print $1}')
+info "Syncing dynamic URLs with IP: $SERVER_IP"
+sed -i "s|FRONTEND_URL=.*|FRONTEND_URL=http://$SERVER_IP|" .env
+sed -i "s|API_URL=.*|API_URL=http://$SERVER_IP/api|" .env
+info "Dynamic URLs updated in $BACKEND_DIR/.env ✓"
 
 # Run migrations
 info "Running database migrations..."
