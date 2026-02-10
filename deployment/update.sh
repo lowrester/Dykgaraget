@@ -40,27 +40,35 @@ info "Backup created: $BACKUP_DIR"
 step "Pulling latest code..."
 cd $APP_DIR
 
+if [ ! -d .git ]; then
+  warn "Not a git repository. Would you like to initialize it automatically?"
+  read -p "Initialize and link to GitHub? (y/n) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    info "Initializing git and linking to origin..."
+    git init
+    git remote add origin https://github.com/lowrester/Dykgaraget.git
+    git fetch origin
+    git checkout -f main || git checkout -f master
+  else
+    warn "Skipping git setup. You must manually manage files."
+  fi
+fi
+
 if [ -d .git ]; then
   info "Fetching updates from git..."
   git fetch origin
   
   # Check if there are updates
   LOCAL=$(git rev-parse @)
-  REMOTE=$(git rev-parse @{u})
+  UPSTREAM='@{u}'
+  REMOTE=$(git rev-parse "$UPSTREAM" 2>/dev/null || echo "unknown")
   
-  if [ $LOCAL = $REMOTE ]; then
+  if [ "$LOCAL" = "$REMOTE" ]; then
     info "Already up to date ✓"
-  else
+  elif [ "$REMOTE" != "unknown" ]; then
     info "Updates available, pulling..."
     git pull origin main || git pull origin master
-  fi
-else
-  warn "Not a git repository, skipping pull"
-  warn "Please manually copy new files to $APP_DIR"
-  read -p "Continue with update? (y/n) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    error "Update cancelled"
   fi
 fi
 
@@ -68,12 +76,17 @@ fi
 step "Updating backend..."
 cd $BACKEND_DIR
 
-# Check for package.json changes
-if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
-  info "package.json changed, installing dependencies..."
-  npm install --omit=dev
+# Check for package.json changes (handle first run where HEAD@{1} might not exist)
+if git rev-parse HEAD@{1} >/dev/null 2>&1; then
+  if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
+    info "package.json changed, installing dependencies..."
+    npm install --omit=dev
+  else
+    info "No dependency changes detected"
+  fi
 else
-  info "No dependency changes detected"
+  info "Initial run or no git history, installing dependencies just in case..."
+  npm install --omit=dev
 fi
 
 # Run migrations if exists
@@ -107,12 +120,17 @@ fi
 step "Updating frontend..."
 cd $FRONTEND_DIR
 
-# Check for package.json changes
-if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
-  info "package.json changed, installing dependencies..."
-  npm install
+# Check for package.json changes (handle first run)
+if git rev-parse HEAD@{1} >/dev/null 2>&1; then
+  if git diff --name-only HEAD@{1} HEAD | grep -q "package.json"; then
+    info "package.json changed, installing dependencies..."
+    npm install
+  else
+    info "No dependency changes detected"
+  fi
 else
-  info "No dependency changes detected"
+  info "Initial run or no git history, installing dependencies just in case..."
+  npm install
 fi
 
 # Build frontend
