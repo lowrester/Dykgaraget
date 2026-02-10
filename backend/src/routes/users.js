@@ -78,7 +78,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
 router.delete('/:id', authenticateAdmin, async (req, res) => {
     try {
         // Prevent self-deletion
-        if (parseInt(req.params.id) === req.user.userId) {
+        if (parseInt(req.params.id) === req.user.id) {
             return res.status(400).json({ error: 'Du kan inte ta bort ditt eget konto' })
         }
 

@@ -20,8 +20,9 @@ export const authenticate = async (req, res, next) => {
   }
 }
 
-export const authenticateAdmin = async (req, res, next) => {
-  await authenticate(req, res, () => {
+export const authenticateAdmin = (req, res, next) => {
+  authenticate(req, res, (err) => {
+    if (err) return next(err)
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' })
     }
