@@ -125,7 +125,8 @@ export function AdminLayout({ title, children }) {
     ...(features.equipment ? [{ to: '/admin/utrustning', icon: '🤿', label: 'Utrustning' }] : []),
     ...(features.invoicing ? [{ to: '/admin/fakturor', icon: '🧾', label: 'Fakturor' }] : []),
     { to: '/admin/installningar', icon: '⚙️', label: 'Inställningar' },
-    { to: '/admin/innehall', icon: '✍️', label: 'Hantera innehåll', separator: true },
+    { to: '/admin/innehall', icon: '✍️', label: 'Hantera innehåll' },
+    { to: '/admin/anvandare', icon: '👥', label: 'Användare', separator: true },
   ]
 
   const SidebarContent = () => (

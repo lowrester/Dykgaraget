@@ -24,6 +24,7 @@ import ManageBookings from './pages/admin/ManageBookings.jsx'
 import ManageInvoices from './pages/admin/ManageInvoices.jsx'
 import FeatureSettings from './pages/admin/FeatureSettings.jsx'
 import ManageContent from './pages/admin/ManageContent.jsx'
+import ManageUsers from './pages/admin/ManageUsers.jsx'
 
 // Stripe redirect-sidor (inline — enkla)
 function PaymentSuccess() {

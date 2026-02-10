@@ -62,12 +62,13 @@ export default function Dashboard() {
         <Card>
           <h3>Snabblänkar</h3>
           <div className="quick-links">
+            <Link to="/admin/innehall" className="quick-link" style={{ background: 'var(--primary)', color: 'white', fontWeight: 'bold' }}>✍️ Hantera innehåll</Link>
             <Link to="/admin/kurser" className="quick-link">📚 Hantera kurser</Link>
             <Link to="/admin/bokningar" className="quick-link">📅 Hantera bokningar</Link>
             <Link to="/admin/instruktorer" className="quick-link">👥 Hantera instruktörer</Link>
             {features.equipment && <Link to="/admin/utrustning" className="quick-link">🤿 Hantera utrustning</Link>}
             {features.invoicing && <Link to="/admin/fakturor" className="quick-link">🧾 Hantera fakturor</Link>}
-            <Link to="/admin/innehall" className="quick-link">✍️ Hantera innehåll</Link>
+            <Link to="/admin/anvandare" className="quick-link">👤 Hantera användare</Link>
             <Link to="/admin/installningar" className="quick-link">⚙️ Inställningar</Link>
           </div>
         </Card>

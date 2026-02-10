@@ -302,3 +302,36 @@ export const useUIStore = create((set, get) => ({
     })
   },
 }))
+
+// ── Users Store ───────────────────────────────────────────
+export const useUsersStore = create((set, get) => ({
+  users: [],
+  loading: false,
+
+  fetch: async () => {
+    set({ loading: true })
+    try {
+      const resp = await api.get('/users')
+      set({ users: resp.data })
+    } finally {
+      set({ loading: false })
+    }
+  },
+
+  create: async (data) => {
+    const resp = await api.post('/users', data)
+    set({ users: [...get().users, resp.data].sort((a, b) => a.username.localeCompare(b.username)) })
+    return resp.data
+  },
+
+  update: async (id, data) => {
+    const resp = await api.put(`/users/${id}`, data)
+    set({ users: get().users.map(u => u.id === id ? { ...u, ...resp.data } : u) })
+    return resp.data
+  },
+
+  remove: async (id) => {
+    await api.delete(`/users/${id}`)
+    set({ users: get().users.filter(u => u.id !== id) })
+  }
+}))

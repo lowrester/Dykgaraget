@@ -14,6 +14,7 @@ import invoicesRoutes from './routes/invoices.js'
 import paymentsRoutes from './routes/payments.js'
 import settingsRoutes from './routes/settings.js'
 import contactRoutes from './routes/contact.js'
+import usersRoutes from './routes/users.js'
 
 dotenv.config()
 
@@ -96,6 +97,7 @@ app.use('/api/invoices', invoicesRoutes)
 app.use('/api/payments', paymentsRoutes)
 app.use('/api/settings', settingsRoutes)
 app.use('/api/contact', contactRoutes)
+app.use('/api/users', usersRoutes)
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use('/api/*', (_req, res) => {
