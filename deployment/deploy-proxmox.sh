@@ -205,15 +205,15 @@ fi
 step "6/8 Deploying frontend..."
 
 # Check if frontend source exists
-if [ ! -d "../frontend" ]; then
-  error "Frontend source directory not found!"
+if [ ! -d "$SOURCE_ROOT/frontend" ]; then
+  error "Frontend source directory not found at $SOURCE_ROOT/frontend"
   exit 1
 fi
 
 # Copy frontend files
 info "Copying frontend files..."
 rm -rf $FRONTEND_DIR
-cp -r ../frontend $FRONTEND_DIR
+cp -r "$SOURCE_ROOT/frontend" $FRONTEND_DIR
 
 cd $FRONTEND_DIR
 
