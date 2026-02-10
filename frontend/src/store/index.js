@@ -52,6 +52,7 @@ export const useSettingsStore = create((set, get) => ({
     email: true,
   },
   settings: [],
+  content: {}, // Maps content_key to value
   loading: false,
   error: null,
 
@@ -66,7 +67,12 @@ export const useSettingsStore = create((set, get) => ({
     set({ loading: true })
     try {
       const data = await client.get('/settings')
-      set({ settings: data, loading: false })
+      // Map content_ keys into a nice object
+      const contentMap = data
+        .filter(s => s.key.startsWith('content_'))
+        .reduce((acc, s) => ({ ...acc, [s.key.replace('content_', '')]: s.value }), {})
+
+      set({ settings: data, content: contentMap, loading: false })
     } catch (err) {
       set({ error: err.message, loading: false })
     }
@@ -75,6 +81,7 @@ export const useSettingsStore = create((set, get) => ({
   updateSetting: async (key, value) => {
     const data = await client.put(`/settings/${key}`, { value })
     if (key.startsWith('feature_')) await get().fetchFeatures()
+    await get().fetchSettings() // Refresh both settings and content map
     return data
   },
 }))

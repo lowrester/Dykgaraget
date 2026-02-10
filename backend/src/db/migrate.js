@@ -224,6 +224,32 @@ async function run() {
       ['invoice_prefix', 'DYK', 'invoicing', 'Prefix för fakturanummer'],
       ['invoice_terms_days', '30', 'invoicing', 'Betalningsvillkor (dagar)'],
       ['invoice_vat_rate', '0.25', 'invoicing', 'Momssats (t.ex. 0.25)'],
+
+      // ── Site Content ──────────────────────────────────────────
+      ['content_home_hero_eyebrow', '🤿 PADI-certifierad dykskola', 'content', 'Hem: Hero Eyebrow'],
+      ['content_home_hero_title', 'Din guide till dykning i Sverige', 'content', 'Hem: Hero Titel'],
+      ['content_home_hero_subtitle', 'Professionell dykutbildning med PADI-certifierade instruktörer. Oavsett nivå — från första dyket till divemaster.', 'content', 'Hem: Hero Undertitel'],
+      ['content_home_stats_1_num', '500+', 'content', 'Hem: Statistik 1 Nummer'],
+      ['content_home_stats_1_lbl', 'Nöjda elever', 'content', 'Hem: Statistik 1 Etikett'],
+      ['content_home_stats_2_num', '12', 'content', 'Hem: Statistik 2 Nummer'],
+      ['content_home_stats_2_lbl', 'År av erfarenhet', 'content', 'Hem: Statistik 2 Etikett'],
+      ['content_home_stats_3_num', 'PADI', 'content', 'Hem: Statistik 3 Nummer'],
+      ['content_home_stats_3_lbl', 'Certifierad', 'content', 'Hem: Statistik 3 Etikett'],
+      ['content_home_stats_4_num', '546513', 'content', 'Hem: Statistik 4 Nummer'],
+      ['content_home_stats_4_lbl', 'Instruktörsnr', 'content', 'Hem: Statistik 4 Etikett'],
+      ['content_home_cta_title', 'Redo att börja dyka?', 'content', 'Hem: CTA Titel'],
+      ['content_home_cta_subtitle', 'Boka din kurs idag och ta första steget ut i det blå.', 'content', 'Hem: CTA Undertitel'],
+
+      ['content_courses_title', 'Certifieringar', 'content', 'Kurser: Sida Titel'],
+      ['content_courses_subtitle', 'Vi erbjuder PADI-certifierade kurser för alla nivåer — från nybörjare till divemaster.', 'content', 'Kurser: Sida Undertitel'],
+
+      ['content_contact_title', 'Kontakta oss', 'content', 'Kontakt: Sida Titel'],
+      ['content_contact_info_title', 'Kontaktuppgifter', 'content', 'Kontakt: Info Titel'],
+      ['content_contact_form_title', 'Skicka meddelande', 'content', 'Kontakt: Formulär Titel'],
+      ['content_contact_hours_title', 'Öppettider', 'content', 'Kontakt: Öppettider Titel'],
+      ['content_contact_hours_monfri', '09:00 – 18:00', 'content', 'Kontakt: Tid Mån-Fre'],
+      ['content_contact_hours_sat', '09:00 – 15:00', 'content', 'Kontakt: Tid Lördag'],
+      ['content_contact_hours_sun', 'Stängt', 'content', 'Kontakt: Tid Söndag'],
     ]
     for (const [key, value, category, description] of settings) {
       await client.query(

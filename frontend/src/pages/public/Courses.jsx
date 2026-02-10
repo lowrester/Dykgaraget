@@ -1,16 +1,24 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useCoursesStore } from '../../store/index.js'
+import { useCoursesStore, useSettingsStore } from '../../store/index.js'
 import { Card, LevelBadge, Spinner } from '../../components/common/index.jsx'
 
 export default function Courses() {
   const { courses, fetch, loading } = useCoursesStore()
-  useEffect(() => { fetch() }, [fetch])
+  const content = useSettingsStore(s => s.content)
+  const fetchSettings = useSettingsStore(s => s.fetchSettings)
+
+  useEffect(() => {
+    fetch()
+    fetchSettings()
+  }, [fetch, fetchSettings])
+
+  const t = (key, fallback) => content[key] || fallback
 
   return (
     <div className="page container">
-      <h1 className="page-title">Certifieringar</h1>
-      <p className="page-subtitle">Vi erbjuder PADI-certifierade kurser för alla nivåer — från nybörjare till divemaster.</p>
+      <h1 className="page-title">{t('courses_title', 'Certifieringar')}</h1>
+      <p className="page-subtitle">{t('courses_subtitle', 'Vi erbjuder PADI-certifierade kurser för alla nivåer — från nybörjare till divemaster.')}</p>
       {loading ? <Spinner /> : (
         <div className="grid grid-2">
           {courses.filter(c => c.is_active).map((course) => (

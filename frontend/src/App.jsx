@@ -23,6 +23,7 @@ import ManageInstructors from './pages/admin/ManageInstructors.jsx'
 import ManageBookings from './pages/admin/ManageBookings.jsx'
 import ManageInvoices from './pages/admin/ManageInvoices.jsx'
 import FeatureSettings from './pages/admin/FeatureSettings.jsx'
+import ManageContent from './pages/admin/ManageContent.jsx'
 
 // Stripe redirect-sidor (inline — enkla)
 function PaymentSuccess() {
@@ -123,6 +124,7 @@ export default function App() {
         <Route path="/admin/bokningar" element={<ProtectedRoute><ManageBookings /></ProtectedRoute>} />
         <Route path="/admin/fakturor" element={<ProtectedRoute><ManageInvoices /></ProtectedRoute>} />
         <Route path="/admin/installningar" element={<ProtectedRoute><FeatureSettings /></ProtectedRoute>} />
+        <Route path="/admin/innehall" element={<ProtectedRoute><ManageContent /></ProtectedRoute>} />
 
         {/* Stripe redirect-sidor */}
         <Route path="/betalning/bekraftad" element={<PublicLayout><PaymentSuccess /></PublicLayout>} />
