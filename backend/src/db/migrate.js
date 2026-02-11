@@ -5,8 +5,9 @@ dotenv.config()
 
 async function run() {
   const client = await pool.connect()
-  const adminPw = process.env.ADMIN_PASSWORD || 'admin123'
-  const adminHash = await bcrypt.hash(adminPw, 10)
+  let createdAdmin = false
+  let adminPw = null
+
   console.log('🔄 Running migrations...')
 
   try {
@@ -23,7 +24,7 @@ async function run() {
 
     const runMigration = async (name, sql) => {
       const check = await client.query('SELECT 1 FROM migration_log WHERE name = $1', [name])
-      if (check.rows.length > 0) return
+      if (check.rows.length > 0) return false
       console.log(`⏳ Applying: ${name}...`)
       if (typeof sql === 'string') {
         await client.query(sql)
@@ -31,6 +32,7 @@ async function run() {
         await client.query(sql.text, sql.values)
       }
       await client.query('INSERT INTO migration_log (name) VALUES ($1)', [name])
+      return true
     }
     await runMigration('001_initial_tables', `
       CREATE TABLE IF NOT EXISTS users (
@@ -309,22 +311,38 @@ async function run() {
       ON CONFLICT DO NOTHING;
     `)
 
-    await runMigration('seed_admin', {
-      text: `
-        INSERT INTO users (username, email, password_hash, role, first_name, last_name)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (username) DO NOTHING
-      `,
-      values: ['admin', 'admin@dykgaraget.se', adminHash, 'admin', 'System', 'Administrator']
-    })
+    // Seeding admin user safely
+    const checkAdmin = await client.query('SELECT 1 FROM users WHERE username = $1', ['admin'])
+    if (checkAdmin.rows.length === 0) {
+      adminPw = process.env.ADMIN_PASSWORD || 'admin123'
+      const adminHash = await bcrypt.hash(adminPw, 10)
+
+      await runMigration('seed_admin', {
+        text: `
+          INSERT INTO users (username, email, password_hash, role, first_name, last_name)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (username) DO NOTHING
+        `,
+        values: ['admin', 'admin@dykgaraget.se', adminHash, 'admin', 'System', 'Administrator']
+      })
+      createdAdmin = true
+    }
 
     await client.query('COMMIT')
-    console.log('')
-    console.log('✅ Migrations complete')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log(`🔐 Admin login: admin / ${adminPw}`)
-    console.log('🌐 Admin URL:   /admin/login')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+    if (createdAdmin) {
+      console.log('')
+      console.log('✅ Migrations complete')
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log(`🔐 Admin created!`)
+      console.log(`👤 Username: admin`)
+      console.log(`🔑 Password: ${adminPw}`)
+      console.log('🌐 Admin URL:  /admin/login')
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    } else {
+      console.log('')
+      console.log('✅ Migrations complete (no new setup needed)')
+    }
   } catch (err) {
     await client.query('ROLLBACK')
     console.error('❌ Migration failed:', err.message)
