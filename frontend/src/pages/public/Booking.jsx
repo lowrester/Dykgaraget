@@ -179,21 +179,25 @@ export default function Booking() {
 
                 {schedLoading ? <Spinner /> : (
                   <div className="course-select-grid">
-                    {schedules.map(s => (
-                      <div
-                        key={s.id}
-                        className={`course-option ${form.schedule_id === String(s.id) ? 'selected' : ''}`}
-                        onClick={() => {
-                          set('schedule_id', String(s.id))
-                          set('booking_date', s.start_date)
-                          set('booking_time', s.start_time)
-                        }}
-                      >
-                        <strong>{new Date(s.start_date).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
-                        <span>Start kl {s.start_time.substring(0, 5)}</span>
-                        <span>{s.max_participants - s.current_participants} platser kvar</span>
-                      </div>
-                    ))}
+                    <div
+                      key={s.id}
+                      className={`course-option ${form.schedule_id === String(s.id) ? 'selected' : ''}`}
+                      onClick={() => {
+                        set('schedule_id', String(s.id))
+                        set('booking_date', s.start_date)
+                        set('booking_time', s.start_time)
+                      }}
+                    >
+                      <strong>
+                        {/* Use replace to make string date work reliably in Safari/Firefox if needed, 
+                              though standard YYYY-MM-DD is usually fine for new Date() */}
+                        {new Date(s.start_date.replace(/-/g, '/')).toLocaleDateString('sv-SE', {
+                          weekday: 'long', day: 'numeric', month: 'long'
+                        })}
+                      </strong>
+                      <span>Start kl {s.start_time ? s.start_time.substring(0, 5) : '—'}</span>
+                      <span>{s.max_participants - s.current_participants} platser kvar</span>
+                    </div>
                     <div
                       className={`course-option ${!form.schedule_id && form.booking_date === 'CONTACT' ? 'selected' : ''}`}
                       onClick={() => {

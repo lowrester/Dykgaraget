@@ -60,7 +60,7 @@ export default function ManageCourses() {
     try {
       const resp = await addSchedule(schedCourse.id, schedForm)
       setSchedules(s => [...s, resp].sort((a, b) => a.start_date.localeCompare(b.start_date)))
-      setSchedForm({ ...schedForm, start_date: '' })
+      setSchedForm(prev => ({ ...prev, start_date: '' }))
       addToast('Datum tillagt!')
     } catch (err) {
       addToast(err.message, 'error')
@@ -228,7 +228,7 @@ export default function ManageCourses() {
             {schedules.map(s => (
               <tr key={s.id}>
                 <td>{s.start_date}</td>
-                <td>{s.start_time.substring(0, 5)}</td>
+                <td>{s.start_time ? s.start_time.substring(0, 5) : '—'}</td>
                 <td>{s.max_participants}</td>
                 <td>{s.max_participants - s.current_participants}</td>
                 <td>
