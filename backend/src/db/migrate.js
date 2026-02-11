@@ -180,21 +180,21 @@ async function run() {
 
     // ── Update Migrations ─────────────────────────────────────
     await runMigration('002_add_sent_at', `
-      ALTER TABLE invoices ADD COLUMN sent_at TIMESTAMP;
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS sent_at TIMESTAMP;
     `)
 
     await runMigration('003_add_is_archived', `
-      ALTER TABLE invoices ADD COLUMN is_archived BOOLEAN DEFAULT false;
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT false;
     `)
 
     await runMigration('004_gdpr_customer_updates', `
-      ALTER TABLE bookings ADD COLUMN customer_id INT REFERENCES users(id) ON DELETE SET NULL;
-      ALTER TABLE users ADD COLUMN phone TEXT;
-      ALTER TABLE users ADD COLUMN address TEXT;
-      ALTER TABLE users ADD COLUMN postal_code TEXT;
-      ALTER TABLE users ADD COLUMN city TEXT;
-      ALTER TABLE users ADD COLUMN gdpr_consent BOOLEAN DEFAULT false;
-      ALTER TABLE users ADD COLUMN gdpr_consent_date TIMESTAMP;
+      ALTER TABLE bookings ADD COLUMN IF NOT EXISTS customer_id INT REFERENCES users(id) ON DELETE SET NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS gdpr_consent BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS gdpr_consent_date TIMESTAMP;
     `)
 
     await runMigration('005_payments_table', `
