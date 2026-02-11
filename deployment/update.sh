@@ -61,11 +61,6 @@ if [ ! -d .git ]; then
     warn "Skipping git setup. You must manually manage files."
   fi
 else
-  # Auto-switch from HTTPS to SSH if needed
-  CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
-  if [[ "$CURRENT_REMOTE" == "https://github.com/lowrester/Dykgaraget.git" ]]; then
-    info "Detected HTTPS remote, switching to SSH for private repo support..."
-    run_as_user git remote set-url origin git@github.com:lowrester/Dykgaraget.git
   fi
 fi
 
