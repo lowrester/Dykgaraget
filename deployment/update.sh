@@ -37,6 +37,11 @@ if [ ! -d "$APP_DIR" ]; then
   error "Application not found at $APP_DIR"
 fi
 
+# Ensure $SUDO_USER has ownership of the app directory to allow git operations
+if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+  chown -R "$SUDO_USER:www-data" "$APP_DIR"
+fi
+
 # ========== BACKUP ==========
 step "Creating backup..."
 BACKUP_DIR="${APP_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
@@ -44,7 +49,8 @@ cp -r $APP_DIR $BACKUP_DIR
 info "Backup created: $BACKUP_DIR"
 
 # ========== GIT SETUP ==========
-# Mark as safe directory to avoid "dubious ownership" when running as $SUDO_USER
+# Mark as safe directory for both root and the user
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 run_as_user git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 
 # ========== GIT PULL ==========
