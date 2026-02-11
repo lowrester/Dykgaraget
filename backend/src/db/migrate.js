@@ -5,6 +5,8 @@ dotenv.config()
 
 async function run() {
   const client = await pool.connect()
+  const adminPw = process.env.ADMIN_PASSWORD || 'admin123'
+  const adminHash = await bcrypt.hash(adminPw, 10)
   console.log('🔄 Running migrations...')
 
   try {
@@ -23,7 +25,11 @@ async function run() {
       const check = await client.query('SELECT 1 FROM migration_log WHERE name = $1', [name])
       if (check.rows.length > 0) return
       console.log(`⏳ Applying: ${name}...`)
-      await client.query(sql)
+      if (typeof sql === 'string') {
+        await client.query(sql)
+      } else {
+        await client.query(sql.text, sql.values)
+      }
       await client.query('INSERT INTO migration_log (name) VALUES ($1)', [name])
     }
     await runMigration('001_initial_tables', `
@@ -302,6 +308,15 @@ async function run() {
       ('Maria Svensson', 'Undervattensfotografi & Nybörjare', 5, 'PADI OW Scuba Instructor, UW Photography', 'Maria kombinerar dykning med fotografi och älskar att undervisa nybörjare.', 500)
       ON CONFLICT DO NOTHING;
     `)
+
+    await runMigration('seed_admin', {
+      text: `
+        INSERT INTO users (username, email, password_hash, role, first_name, last_name)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (username) DO NOTHING
+      `,
+      values: ['admin', 'admin@dykgaraget.se', adminHash, 'admin', 'System', 'Administrator']
+    })
 
     await client.query('COMMIT')
     console.log('')
