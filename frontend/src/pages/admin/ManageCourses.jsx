@@ -20,7 +20,13 @@ export default function ManageCourses() {
   const [schedModal, setSchedModal] = useState(false)
   const [schedCourse, setSchedCourse] = useState(null)
   const [schedules, setSchedules] = useState([])
-  const [schedForm, setSchedForm] = useState({ start_date: '', start_time: '09:00', end_date: '', max_participants: 10 })
+  const [schedForm, setSchedForm] = useState({
+    start_date: '',
+    start_time: '09:00',
+    end_date: '',
+    max_participants: 10,
+    sessions: [{ date: '', time: '09:00' }]
+  })
 
   const sorted = useMemo(() => {
     return [...courses].sort((a, b) => {
@@ -56,10 +62,14 @@ export default function ManageCourses() {
   }
 
   const handleAddSchedule = async () => {
-    if (!schedForm.start_date || !schedForm.start_time) return
+    const firstSession = schedForm.sessions[0]
+    if (!firstSession?.date || !firstSession?.time) {
+      addToast('Minst ett datum och tid krävs', 'warning')
+      return
+    }
 
     // Prevent past dates
-    const selected = new Date(schedForm.start_date)
+    const selected = new Date(firstSession.date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     if (selected < today) {
@@ -70,7 +80,7 @@ export default function ManageCourses() {
     try {
       const resp = await addSchedule(schedCourse.id, schedForm)
       setSchedules(s => [...s, resp].sort((a, b) => a.start_date.localeCompare(b.start_date)))
-      setSchedForm(prev => ({ ...prev, start_date: '' }))
+      setSchedForm({ ...schedForm, sessions: [{ date: '', time: '09:00' }] })
       addToast('Datum tillagt!')
     } catch (err) {
       addToast(err.message, 'error')
@@ -215,11 +225,54 @@ export default function ManageCourses() {
       <Modal isOpen={schedModal} onClose={() => setSchedModal(false)} title={`Schema: ${schedCourse?.name}`} size="lg">
         <Card style={{ marginBottom: '1rem', padding: '1rem', background: 'var(--gray-50)' }}>
           <h4 style={{ marginBottom: '.75rem', fontSize: '.9rem' }}>Lägg till datum</h4>
-          <div className="grid grid-4" style={{ alignItems: 'flex-end' }}>
-            <Input label="Datum" type="date" value={schedForm.start_date} onChange={e => setSchedForm({ ...schedForm, start_date: e.target.value })} />
-            <Input label="Tid" type="time" value={schedForm.start_time} onChange={e => setSchedForm({ ...schedForm, start_time: e.target.value })} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', marginBottom: '1rem', alignItems: 'end' }}>
             <Input label="Max deltagare" type="number" value={schedForm.max_participants} onChange={e => setSchedForm({ ...schedForm, max_participants: e.target.value })} />
-            <Button onClick={handleAddSchedule} style={{ marginBottom: '1rem' }}>Lägg till</Button>
+            <Button onClick={handleAddSchedule} style={{ marginBottom: '1rem' }}>Lägg till hela schemat</Button>
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--gray-500)' }}>SCHEMA (DATUM & TIDER)</div>
+            {schedForm.sessions.map((session, idx) => (
+              <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'end' }}>
+                <Input
+                  type="date"
+                  value={session.date}
+                  onChange={e => {
+                    const newSessions = [...schedForm.sessions]
+                    newSessions[idx].date = e.target.value
+                    setSchedForm({ ...schedForm, sessions: newSessions })
+                  }}
+                />
+                <Input
+                  type="time"
+                  value={session.time}
+                  onChange={e => {
+                    const newSessions = [...schedForm.sessions]
+                    newSessions[idx].time = e.target.value
+                    setSchedForm({ ...schedForm, sessions: newSessions })
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {idx > 0 && (
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      style={{ padding: '0.5rem', height: '38px', width: '38px' }}
+                      onClick={() => setSchedForm({ ...schedForm, sessions: schedForm.sessions.filter((_, i) => i !== idx) })}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            <Button
+              variant="secondary"
+              size="sm"
+              style={{ width: '100%', marginTop: '0.25rem' }}
+              onClick={() => setSchedForm({ ...schedForm, sessions: [...schedForm.sessions, { date: '', time: '09:00' }] })}
+            >
+              + Lägg till dag/session
+            </Button>
           </div>
         </Card>
 
@@ -237,8 +290,16 @@ export default function ManageCourses() {
             {schedules.length === 0 && <tr><td colSpan={5} className="empty">Inga datum inlagda</td></tr>}
             {schedules.map(s => (
               <tr key={s.id}>
-                <td>{s.start_date}</td>
-                <td>{s.start_time ? s.start_time.substring(0, 5) : '—'}</td>
+                <td>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {(s.sessions || [{ date: s.start_date, time: s.start_time }]).map((sess, idx) => (
+                      <div key={idx} style={{ fontSize: '0.85rem' }}>
+                        {sess.date} <span style={{ color: 'var(--gray-400)' }}>kl {sess.time?.substring(0, 5)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </td>
+                <td>—</td>
                 <td>{s.max_participants}</td>
                 <td>{s.max_participants - s.current_participants}</td>
                 <td>

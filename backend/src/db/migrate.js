@@ -212,6 +212,20 @@ async function run() {
       );
     `)
 
+    await runMigration('006_multi_session_schedules', `
+      ALTER TABLE course_schedules ADD COLUMN IF NOT EXISTS sessions JSONB DEFAULT '[]';
+      
+      -- Migrate existing single-day data to sessions array
+      UPDATE course_schedules 
+      SET sessions = jsonb_build_array(
+        jsonb_build_object(
+          'date', start_date,
+          'time', start_time
+        )
+      )
+      WHERE sessions = '[]' OR sessions IS NULL;
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

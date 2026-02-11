@@ -119,15 +119,27 @@ router.get('/:id/schedules', async (req, res) => {
 // POST /api/courses/:id/schedules (admin)
 router.post('/:id/schedules', authenticateAdmin, async (req, res) => {
   try {
-    const { start_date, start_time, end_date, max_participants } = req.body
-    if (!start_date || !start_time) {
-      return res.status(400).json({ error: 'Startdatum och tid krävs' })
+    const { start_date, start_time, end_date, max_participants, sessions } = req.body
+
+    // Support either traditional fields or new sessions array
+    // Default to traditionals if sessions is missing
+    const finalSessions = sessions || [{ date: start_date, time: start_time }]
+
+    if (!finalSessions || finalSessions.length === 0 || !finalSessions[0].date) {
+      return res.status(400).json({ error: 'Minst ett datum krävs' })
     }
 
     const result = await pool.query(
-      `INSERT INTO course_schedules (course_id, start_date, start_time, end_date, max_participants)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [req.params.id, start_date, start_time, end_date, max_participants || 10]
+      `INSERT INTO course_schedules (course_id, start_date, start_time, end_date, max_participants, sessions)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [
+        req.params.id,
+        finalSessions[0].date,
+        finalSessions[0].time,
+        end_date || null, // Fix: Allow null/empty
+        max_participants || 10,
+        JSON.stringify(finalSessions)
+      ]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {

@@ -189,15 +189,23 @@ export default function Booking() {
                           set('booking_time', s.start_time)
                         }}
                       >
-                        <strong>
-                          {/* Use replace to make string date work reliably in Safari/Firefox if needed, 
-                              though standard YYYY-MM-DD is usually fine for new Date() */}
-                          {new Date(s.start_date.replace(/-/g, '/')).toLocaleDateString('sv-SE', {
-                            weekday: 'long', day: 'numeric', month: 'long'
-                          })}
-                        </strong>
-                        <span>Start kl {s.start_time ? s.start_time.substring(0, 5) : '—'}</span>
-                        <span>{s.max_participants - s.current_participants} platser kvar</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {(s.sessions || [{ date: s.start_date, time: s.start_time }]).map((sess, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ fontSize: '0.9rem' }}>
+                                {new Date(sess.date.replace(/-/g, '/')).toLocaleDateString('sv-SE', {
+                                  weekday: 'short', day: 'numeric', month: 'short'
+                                })}
+                              </strong>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
+                                kl {sess.time ? sess.time.substring(0, 5) : '—'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--gray-100)', fontSize: '0.75rem', color: 'var(--blue)' }}>
+                          {s.max_participants - s.current_participants} platser kvar
+                        </div>
                       </div>
                     ))}
                     <div
