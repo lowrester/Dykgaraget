@@ -42,31 +42,45 @@ export default function Header() {
             <NavLink to="/utrustning" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Utrustning</NavLink>
           )}
           <NavLink to="/kontakt" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Kontakt</NavLink>
+
+          {/* Mobile only actions at the bottom of the drawer */}
+          <div className="mobile-only-actions">
+            {user ? (
+              <button onClick={() => { handleLogout(); toggleOpen(false) }} className="btn btn-ghost">Logga ut</button>
+            ) : (
+              <>
+                <Link to="/loggain" className="btn btn-secondary" onClick={() => toggleOpen(false)}>Logga in</Link>
+                <Link to="/bokning" className="btn btn-primary" onClick={() => toggleOpen(false)}>Boka kurs</Link>
+              </>
+            )}
+          </div>
         </nav>
 
         {/* Actions */}
         <div className="header-actions">
-          {user ? (
-            <>
-              {user.role === 'admin' ? (
-                <Link to="/admin" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Admin</Link>
-              ) : (
-                <Link to="/konto" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Mina sidor</Link>
-              )}
-              <button onClick={handleLogout} className="btn btn-ghost btn-sm">Logga ut</button>
-            </>
-          ) : (
-            <>
-              <Link to="/loggain" className="btn btn-ghost btn-sm" style={{ marginRight: '0.5rem' }}>Logga in</Link>
-              <Link to="/bokning" className="btn btn-primary btn-sm">Boka nu</Link>
-            </>
-          )}
+          <div className="desktop-only-actions">
+            {user ? (
+              <>
+                {user.role === 'admin' ? (
+                  <Link to="/admin" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Admin</Link>
+                ) : (
+                  <Link to="/konto" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Mina sidor</Link>
+                )}
+                <button onClick={handleLogout} className="btn btn-ghost btn-sm">Logga ut</button>
+              </>
+            ) : (
+              <>
+                <Link to="/loggain" className="btn btn-ghost btn-sm" style={{ marginRight: '0.5rem' }}>Logga in</Link>
+                <Link to="/bokning" className="btn btn-primary btn-sm">Boka nu</Link>
+              </>
+            )}
+          </div>
 
           {/* Hamburger */}
           <button className="nav-toggle" onClick={() => toggleOpen(!open)} aria-label="Meny">
-            <span style={open ? { transform: 'rotate(45deg) translate(5px, 5px)' } : {}} />
+            <span style={open ? { transform: 'rotate(45deg) translate(2px, -2px)' } : {}} />
             <span style={open ? { opacity: 0 } : {}} />
-            <span style={open ? { transform: 'rotate(-45deg) translate(4px, -4px)' } : {}} />
+            <span style={open ? { transform: 'rotate(-45deg) translate(2px, 2px)' } : {}} />
           </button>
         </div>
 
