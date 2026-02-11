@@ -60,8 +60,6 @@ if [ ! -d .git ]; then
   else
     warn "Skipping git setup. You must manually manage files."
   fi
-else
-  fi
 fi
 
 if [ -d .git ]; then
