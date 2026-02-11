@@ -116,7 +116,11 @@ export default function App() {
         <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
         <Route path="/certifieringar" element={<PublicLayout><Courses /></PublicLayout>} />
         <Route path="/instruktorer" element={<PublicLayout><Instructors /></PublicLayout>} />
-        <Route path="/utrustning" element={<PublicLayout><Equipment /></PublicLayout>} />
+        <Route path="/utrustning" element={
+          useSettingsStore.getState().features.equipment
+            ? <PublicLayout><Equipment /></PublicLayout>
+            : <Navigate to="/" replace />
+        } />
         <Route path="/bokning" element={<PublicLayout><Booking /></PublicLayout>} />
         <Route path="/kontakt" element={<PublicLayout><Contact /></PublicLayout>} />
         <Route path="/registrera" element={<PublicLayout><Register /></PublicLayout>} />

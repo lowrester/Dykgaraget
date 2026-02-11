@@ -153,24 +153,32 @@ button {
   grid-template-columns: repeat(4, 1fr);
 }
 
-@media (max-width:1024px) {
+@media (max-width: 1024px) {
   .grid-4 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width:768px) {
+@media (max-width: 768px) {
   .grid-3 {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .section {
+    padding: 2.5rem 0;
+  }
 }
 
-@media (max-width:640px) {
+@media (max-width: 640px) {
 
   .grid-2,
   .grid-3,
   .grid-4 {
     grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 0 1rem;
   }
 }
 
@@ -369,27 +377,67 @@ button {
   transition: var(--t);
 }
 
-@media (max-width:768px) {
+@media (max-width: 768px) {
   .nav {
-    display: none;
+    position: fixed;
+    top: 0;
+    right: -100%;
+    bottom: 0;
+    width: 280px;
+    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    padding: 5rem 1.5rem 2rem;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s var(--ease), right 0s 0.3s;
+    z-index: 1000;
+    visibility: hidden;
   }
 
   .nav.open {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: var(--header-h);
-    left: 0;
     right: 0;
-    background: var(--white);
-    border-bottom: 1px solid var(--gray-200);
-    padding: 0.75rem;
-    box-shadow: var(--shadow-md);
-    z-index: 99;
+    visibility: visible;
+    transition: transform 0.3s var(--ease);
+  }
+
+  /* Overlay background */
+  .header-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--t);
+  }
+
+  .header-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .nav-link {
+    font-size: 1.1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gray-100);
+    border-radius: 0;
+  }
+
+  .nav-link:hover,
+  .nav-link.active {
+    background: transparent;
+    color: var(--blue);
   }
 
   .nav-toggle {
     display: flex;
+    position: relative;
+    z-index: 1001;
+  }
+
+  body.menu-open {
+    overflow: hidden;
   }
 }
 
@@ -489,11 +537,20 @@ button {
   border-radius: var(--radius-lg);
   padding: 1.25rem;
   transition: var(--t);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .card:hover {
   box-shadow: var(--shadow-md);
   border-color: var(--gray-300);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
 }
 
 /* ── Hero ───────────────────────────────────────────────── */

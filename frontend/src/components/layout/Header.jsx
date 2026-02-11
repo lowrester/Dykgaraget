@@ -11,12 +11,21 @@ export default function Header() {
 
   const handleLogout = () => { logout(); navigate('/') }
 
+  const toggleOpen = (val) => {
+    setOpen(val)
+    if (val) document.body.classList.add('menu-open')
+    else document.body.classList.remove('menu-open')
+  }
+
   return (
     <header className="header">
       <div className="container header-inner">
 
+        {/* Overlay for mobile menu */}
+        <div className={`header-overlay${open ? ' open' : ''}`} onClick={() => toggleOpen(false)} />
+
         {/* Logo med riktig bild */}
-        <Link to="/" className="logo" onClick={() => setOpen(false)}>
+        <Link to="/" className="logo" onClick={() => toggleOpen(false)}>
           <img src="/logo.png" alt="Dykgaraget" className="logo-img" />
           <span className="logo-name">
             Dykgaraget
@@ -26,13 +35,13 @@ export default function Header() {
 
         {/* Nav */}
         <nav className={`nav${open ? ' open' : ''}`}>
-          <NavLink to="/" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Hem</NavLink>
-          <NavLink to="/certifieringar" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Certifieringar</NavLink>
-          <NavLink to="/instruktorer" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Instruktörer</NavLink>
+          <NavLink to="/" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Hem</NavLink>
+          <NavLink to="/certifieringar" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Certifieringar</NavLink>
+          <NavLink to="/instruktorer" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Instruktörer</NavLink>
           {features.equipment && (
-            <NavLink to="/utrustning" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Utrustning</NavLink>
+            <NavLink to="/utrustning" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Utrustning</NavLink>
           )}
-          <NavLink to="/kontakt" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => setOpen(false)}>Kontakt</NavLink>
+          <NavLink to="/kontakt" className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')} onClick={() => toggleOpen(false)}>Kontakt</NavLink>
         </nav>
 
         {/* Actions */}
@@ -40,9 +49,9 @@ export default function Header() {
           {user ? (
             <>
               {user.role === 'admin' ? (
-                <Link to="/admin" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Admin</Link>
+                <Link to="/admin" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Admin</Link>
               ) : (
-                <Link to="/konto" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>Mina sidor</Link>
+                <Link to="/konto" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Mina sidor</Link>
               )}
               <button onClick={handleLogout} className="btn btn-ghost btn-sm">Logga ut</button>
             </>
@@ -54,10 +63,10 @@ export default function Header() {
           )}
 
           {/* Hamburger */}
-          <button className="nav-toggle" onClick={() => setOpen(!open)} aria-label="Meny">
-            <span style={open ? { transform: 'rotate(45deg) translate(4px,4px)' } : {}} />
+          <button className="nav-toggle" onClick={() => toggleOpen(!open)} aria-label="Meny">
+            <span style={open ? { transform: 'rotate(45deg) translate(5px, 5px)' } : {}} />
             <span style={open ? { opacity: 0 } : {}} />
-            <span style={open ? { transform: 'rotate(-45deg) translate(4px,-4px)' } : {}} />
+            <span style={open ? { transform: 'rotate(-45deg) translate(4px, -4px)' } : {}} />
           </button>
         </div>
 

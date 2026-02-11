@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
+import { useSettingsStore } from '../../store/index.js'
 
 export default function Footer() {
+  const features = useSettingsStore((s) => s.features)
   return (
     <footer className="footer">
       <div className="container">
@@ -35,7 +37,7 @@ export default function Footer() {
             <h4>Info</h4>
             <ul className="footer-links">
               <li><Link to="/instruktorer">Instruktörer</Link></li>
-              <li><Link to="/utrustning">Utrustning</Link></li>
+              {features.equipment && <li><Link to="/utrustning">Utrustning</Link></li>}
               <li><Link to="/kontakt">Kontakt</Link></li>
               <li><Link to="/bokning">Boka kurs</Link></li>
             </ul>

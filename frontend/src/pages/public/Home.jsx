@@ -5,6 +5,7 @@ import { Card, LevelBadge, Spinner } from '../../components/common/index.jsx'
 
 export default function Home() {
   const { courses, fetch, loading } = useCoursesStore()
+  const features = useSettingsStore((s) => s.features)
   const content = useSettingsStore((s) => s.content)
   const fetchSettings = useSettingsStore((s) => s.fetchSettings)
 
@@ -97,9 +98,9 @@ export default function Home() {
             {[
               { icon: '🏊', title: 'Välj kurs', desc: 'Från nybörjarkurs till avancerade specialkurser för erfarna dykare.' },
               { icon: '📅', title: 'Boka enkelt', desc: 'Välj datum och antal platser direkt online. Bekräftelse via e-post.' },
-              { icon: '🤿', title: 'Dyk och lär', desc: 'Teorilektioner, poolövningar och öppet vatten under guidning.' },
+              features.equipment && { icon: '🤿', title: 'Utrustning', desc: 'Vi tillhandahåller all utrustning du behöver under kurserna.' },
               { icon: '🎓', title: 'Certifikat', desc: 'PADI-certifiering som gäller livet ut och accepteras världen över.' },
-            ].map(item => (
+            ].filter(Boolean).map(item => (
               <div key={item.title} style={{ textAlign: 'center', padding: '1rem' }}>
                 <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{item.icon}</div>
                 <h3 style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--gray-900)', marginBottom: '0.4rem', letterSpacing: '-0.02em' }}>{item.title}</h3>
