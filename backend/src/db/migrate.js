@@ -280,18 +280,18 @@ async function run() {
 
     await runMigration('seed_equipment', `
       INSERT INTO equipment (name,category,size,quantity_total,quantity_available,rental_price) VALUES
-      ('Wetsuit', 'Wetsuit', 'S', 10, 100),
-      ('Wetsuit', 'Wetsuit', 'M', 15, 100),
-      ('Wetsuit', 'Wetsuit', 'L', 12, 100),
-      ('Wetsuit', 'Wetsuit', 'XL', 8, 100),
-      ('BCD', 'BCD', 'S', 8, 100),
-      ('BCD', 'BCD', 'M', 12, 100),
-      ('BCD', 'BCD', 'L', 10, 100),
-      ('Mask & Fenor', 'Mask', '36-39', 10, 100),
-      ('Mask & Fenor', 'Mask', '40-43', 15, 100),
-      ('Mask & Fenor', 'Mask', '44-47', 12, 100),
-      ('Regulator', 'Regulator', 'OneSize', 20, 100),
-      ('Dykdator', 'Computer', 'OneSize', 15, 100)
+      ('Wetsuit', 'Wetsuit', 'S', 10, 10, 100),
+      ('Wetsuit', 'Wetsuit', 'M', 15, 15, 100),
+      ('Wetsuit', 'Wetsuit', 'L', 12, 12, 100),
+      ('Wetsuit', 'Wetsuit', 'XL', 8, 8, 100),
+      ('BCD', 'BCD', 'S', 8, 8, 100),
+      ('BCD', 'BCD', 'M', 12, 12, 100),
+      ('BCD', 'BCD', 'L', 10, 10, 100),
+      ('Mask & Fenor', 'Mask', '36-39', 10, 10, 100),
+      ('Mask & Fenor', 'Mask', '40-43', 15, 15, 100),
+      ('Mask & Fenor', 'Mask', '44-47', 12, 12, 100),
+      ('Regulator', 'Regulator', 'OneSize', 20, 20, 100),
+      ('Dykdator', 'Computer', 'OneSize', 15, 15, 100)
       ON CONFLICT DO NOTHING;
     `)
 
