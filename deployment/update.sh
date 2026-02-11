@@ -15,6 +15,13 @@ info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+run_as_user() {
+  if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+    sudo -u "$SUDO_USER" "$@"
+  else
+    "$@"
+  fi
+}
 
 if [ "$EUID" -ne 0 ]; then 
   error "Please run as root"
@@ -46,10 +53,10 @@ if [ ! -d .git ]; then
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     info "Initializing git and linking to origin (SSH)..."
-    git init
-    git remote add origin git@github.com:lowrester/Dykgaraget.git
-    git fetch origin
-    git checkout -f main || git checkout -f master
+    run_as_user git init
+    run_as_user git remote add origin git@github.com:lowrester/Dykgaraget.git
+    run_as_user git fetch origin
+    run_as_user git checkout -f main || run_as_user git checkout -f master
   else
     warn "Skipping git setup. You must manually manage files."
   fi
@@ -58,13 +65,13 @@ else
   CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
   if [[ "$CURRENT_REMOTE" == "https://github.com/lowrester/Dykgaraget.git" ]]; then
     info "Detected HTTPS remote, switching to SSH for private repo support..."
-    git remote set-url origin git@github.com:lowrester/Dykgaraget.git
+    run_as_user git remote set-url origin git@github.com:lowrester/Dykgaraget.git
   fi
 fi
 
 if [ -d .git ]; then
   info "Fetching updates from git..."
-  git fetch origin
+  run_as_user git fetch origin
   
   # Check if there are updates
   LOCAL=$(git rev-parse @)
@@ -75,7 +82,7 @@ if [ -d .git ]; then
     info "Already up to date ✓"
   elif [ "$REMOTE" != "unknown" ]; then
     info "Updates available, pulling..."
-    git pull origin main || git pull origin master
+    run_as_user git pull origin main || run_as_user git pull origin master
   fi
 fi
 
