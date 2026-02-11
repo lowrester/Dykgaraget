@@ -17,11 +17,13 @@ error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 step() { echo -e "${BLUE}[STEP]${NC} $1"; }
 run_as_user() {
   if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
-    sudo -u "$SUDO_USER" "$@"
+    sudo -u "$SUDO_USER" -H "$@"
   else
     "$@"
   fi
 }
+
+info "Running as: $(whoami) (SUDO_USER: ${SUDO_USER:-none})"
 
 if [ "$EUID" -ne 0 ]; then 
   error "Please run as root"
