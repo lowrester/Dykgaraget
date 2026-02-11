@@ -43,6 +43,10 @@ BACKUP_DIR="${APP_DIR}_backup_$(date +%Y%m%d_%H%M%S)"
 cp -r $APP_DIR $BACKUP_DIR
 info "Backup created: $BACKUP_DIR"
 
+# ========== GIT SETUP ==========
+# Mark as safe directory to avoid "dubious ownership" when running as $SUDO_USER
+run_as_user git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+
 # ========== GIT PULL ==========
 step "Pulling latest code..."
 cd $APP_DIR
