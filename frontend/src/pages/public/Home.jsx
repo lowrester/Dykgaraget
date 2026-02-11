@@ -24,6 +24,7 @@ export default function Home() {
       <section className="hero">
         <div className="container">
           <div className="hero-content">
+            <img src="/logo.png" alt="Dykgaraget Logo" className="hero-logo" />
             <div className="hero-eyebrow">{t('home_hero_eyebrow', '🤿 PADI-certifierad dykskola')}</div>
             <h1 className="hero-title">
               {t('home_hero_title', 'Din guide till dykning i Sverige')}
