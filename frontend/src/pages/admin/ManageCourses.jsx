@@ -57,6 +57,16 @@ export default function ManageCourses() {
 
   const handleAddSchedule = async () => {
     if (!schedForm.start_date || !schedForm.start_time) return
+
+    // Prevent past dates
+    const selected = new Date(schedForm.start_date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (selected < today) {
+      addToast('Kan inte lägga till datum bakåt i tiden', 'warning')
+      return
+    }
+
     try {
       const resp = await addSchedule(schedCourse.id, schedForm)
       setSchedules(s => [...s, resp].sort((a, b) => a.start_date.localeCompare(b.start_date)))
