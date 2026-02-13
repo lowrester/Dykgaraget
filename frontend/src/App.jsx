@@ -23,7 +23,7 @@ import Checkout from './pages/public/Checkout.jsx'
 import AdminLogin from './pages/admin/Login.jsx'
 import AdminDashboard from './pages/admin/Dashboard.jsx'
 import ManageCourses from './pages/admin/ManageCourses.jsx'
-import ManageEquipment from './pages/admin/ManageEquipment.jsx'
+import ManageArticles from './pages/admin/ManageArticles.jsx'
 import ManageInstructors from './pages/admin/ManageInstructors.jsx'
 import ManageBookings from './pages/admin/ManageBookings.jsx'
 import ManageInvoices from './pages/admin/ManageInvoices.jsx'
@@ -136,7 +136,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/kurser" element={<ProtectedRoute><ManageCourses /></ProtectedRoute>} />
-        <Route path="/admin/utrustning" element={<ProtectedRoute><ManageEquipment /></ProtectedRoute>} />
+        <Route path="/admin/utrustning" element={<ProtectedRoute><ManageArticles /></ProtectedRoute>} />
         <Route path="/admin/lager" element={<ProtectedRoute><ManageLager /></ProtectedRoute>} />
         <Route path="/admin/instruktorer" element={<ProtectedRoute><ManageInstructors /></ProtectedRoute>} />
         <Route path="/admin/bokningar" element={<ProtectedRoute><ManageBookings /></ProtectedRoute>} />

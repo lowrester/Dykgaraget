@@ -435,6 +435,12 @@ export const useInventoryStore = create((set, get) => ({
     const data = await client.get(`/inventory/transactions/${equipmentId}`)
     set({ transactions: data })
     return data
+  },
+
+  adjustStock: async (payload) => {
+    // payload: { equipment_id, type, quantity, notes }
+    await client.post('/inventory/adjust', payload)
+    // No explicit get() needed if we just refresh relevant lists in component
   }
 }))
 

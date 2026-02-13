@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useEquipmentStore, useUIStore, useInventoryStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input, Badge } from '../../components/common/index.jsx'
 
-const EMPTY = { name: '', category: 'Wetsuit', size: '', quantity_total: 1, quantity_available: 1, rental_price: 100, condition: 'god', is_active: true }
-const CATS = ['Wetsuit', 'BCD', 'Mask', 'Regulator', 'Computer', 'Fenor', 'Torrdräkt', 'Övrigt']
+const EMPTY = { name: '', category: 'Övrigt', size: '', quantity_total: 1, quantity_available: 1, rental_price: 100, condition: 'ny', is_active: true }
+const CATS = ['Våtdräkt', 'BCD', 'Mask', 'Regulator', 'Dator', 'Fenor', 'Torrdräkt', 'Merchandise', 'Tillbehör', 'Övrigt']
 
-export default function ManageEquipment() {
-  const { equipment, fetch, create, update, remove, loading } = useEquipmentStore()
+export default function ManageArticles() {
+  const { equipment: articles, fetch, create, update, remove, loading } = useEquipmentStore()
   const { transactions, fetchTransactions } = useInventoryStore()
   const { addToast, ask } = useUIStore()
   const [modal, setModal] = useState(false)
@@ -28,7 +28,7 @@ export default function ManageEquipment() {
       const payload = { ...form, quantity_total: parseInt(form.quantity_total), quantity_available: parseInt(form.quantity_available ?? form.quantity_total), rental_price: parseFloat(form.rental_price) }
       if (editing) await update(editing.id, payload)
       else await create(payload)
-      addToast(editing ? 'Utrustning uppdaterad!' : 'Utrustning skapad!')
+      addToast(editing ? 'Artikel uppdaterad!' : 'Artikel skapad!')
       close()
     } catch (err) {
       addToast(err.message, 'error')
@@ -36,11 +36,11 @@ export default function ManageEquipment() {
   }
 
   const handleDelete = async (item) => {
-    const ok = await ask({ title: 'Ta bort utrustning?', message: `Är du säker på att du vill ta bort "${item.name} (${item.size})"?`, type: 'danger', confirmText: 'Ta bort' })
+    const ok = await ask({ title: 'Ta bort artikel?', message: `Är du säker på att du vill ta bort "${item.name} (${item.size})"?`, type: 'danger', confirmText: 'Ta bort' })
     if (!ok) return
     try {
       await remove(item.id)
-      addToast('Utrustning borttagen')
+      addToast('Artikel borttagen')
     } catch (err) {
       addToast(err.message, 'error')
     }
@@ -54,26 +54,26 @@ export default function ManageEquipment() {
   }
 
   return (
-    <AdminLayout title="Utrustning">
+    <AdminLayout title="Artiklar">
       <div className="page-actions"><Button onClick={openNew}>+ Ny artikel</Button></div>
       {loading ? <div className="spinner-wrapper"><div className="spinner" /></div> : (
         <Card>
           <table className="admin-table">
-            <thead><tr><th>Namn</th><th>Kategori</th><th>Storlek</th><th>Antal</th><th>Hyra/dag</th><th>Status</th><th>Åtgärder</th></tr></thead>
+            <thead><tr><th>Namn</th><th>Kategori</th><th>Storlek</th><th>Antal</th><th>Pris/dag</th><th>Status</th><th>Åtgärder</th></tr></thead>
             <tbody>
-              {equipment.length === 0 && <tr><td colSpan={7} className="empty">Ingen utrustning registrerad</td></tr>}
-              {equipment.map((e) => (
+              {articles.length === 0 && <tr><td colSpan={7} className="empty">Inga artiklar registrerade</td></tr>}
+              {articles.map((e) => (
                 <tr key={e.id}>
                   <td><strong>{e.name}</strong></td>
                   <td>{e.category}</td>
                   <td>{e.size}</td>
                   <td>{e.quantity_available}/{e.quantity_total}</td>
                   <td>{parseFloat(e.rental_price).toLocaleString('sv-SE')} kr</td>
-                  <td><span className={`badge ${e.is_active ? 'badge-success' : 'badge-default'}`}>{e.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
+                  <td><Badge variant={e.is_active ? 'success' : 'default'}>{e.is_active ? 'Aktiv' : 'Inaktiv'}</Badge></td>
                   <td>
                     <button className="btn btn-sm btn-secondary" onClick={() => openEdit(e)}>Redigera</button>
                     <button className="btn btn-sm btn-ghost" onClick={() => openHistory(e)} style={{ marginLeft: '0.5rem' }}>Historik</button>
-                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(e)} style={{ marginLeft: '0.5rem' }}>Ta bort</button>
+                    <button className="btn btn-sm btn-ghost text-danger" onClick={() => handleDelete(e)} style={{ marginLeft: '0.5rem' }}>Ta bort</button>
                   </td>
                 </tr>
               ))}
@@ -81,7 +81,7 @@ export default function ManageEquipment() {
           </table>
         </Card>
       )}
-      <Modal isOpen={modal} onClose={close} title={editing ? 'Redigera utrustning' : 'Ny utrustning'}>
+      <Modal isOpen={modal} onClose={close} title={editing ? 'Redigera artikel' : 'Ny artikel'}>
         <div className="grid grid-2">
           <Input label="Namn" value={form.name} onChange={(e) => set('name', e.target.value)} required />
           <div className="form-group">
@@ -93,7 +93,7 @@ export default function ManageEquipment() {
           <Input label="Storlek" value={form.size} onChange={(e) => set('size', e.target.value)} placeholder="S, M, L, 40-43 ..." />
           <Input label="Totalt antal" type="number" min={1} value={form.quantity_total} onChange={(e) => set('quantity_total', e.target.value)} />
           <Input label="Tillgängligt antal" type="number" min={0} max={form.quantity_total} value={form.quantity_available ?? form.quantity_total} onChange={(e) => set('quantity_available', e.target.value)} />
-          <Input label="Hyra/dag (kr)" type="number" min={0} value={form.rental_price} onChange={(e) => set('rental_price', e.target.value)} />
+          <Input label="Pris/dag (kr)" type="number" min={0} value={form.rental_price} onChange={(e) => set('rental_price', e.target.value)} />
           <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', paddingTop: '1.5rem' }}>
             <input type="checkbox" id="eq_active" checked={form.is_active} onChange={(e) => set('is_active', e.target.checked)} />
             <label htmlFor="eq_active">Aktiv</label>
@@ -118,7 +118,7 @@ export default function ManageEquipment() {
                   <td>{new Date(t.created_at).toLocaleString()}</td>
                   <td><Badge variant={t.type === 'inbound' ? 'success' : t.type === 'outbound' ? 'warning' : 'default'}>{t.type}</Badge></td>
                   <td>{t.quantity > 0 ? `+${t.quantity}` : t.quantity}</td>
-                  <td>{t.reference_type || 'Manual'} {t.notes && <><br /><small>{t.notes}</small></>}</td>
+                  <td>{t.reference_type || 'Manuellt'} {t.notes && <><br /><small>{t.notes}</small></>}</td>
                 </tr>
               ))}
             </tbody>

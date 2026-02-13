@@ -145,15 +145,44 @@ router.post('/po/:id/receive', authenticateAdmin, async (req, res) => {
     }
 })
 
-// ── Inventory Transactions ─────────────────────────────────
-
-// GET /api/inventory/transactions/:equipmentId
-router.get('/transactions/:equipmentId', authenticateAdmin, async (req, res) => {
+// POST /api/inventory/adjust
+router.post('/adjust', authenticateAdmin, async (req, res) => {
+    const { equipment_id, type, quantity, notes } = req.body // type: inbound / outbound
+    const client = await pool.connect()
     try {
-        const result = await pool.query(
-            'SELECT * FROM inventory_transactions WHERE equipment_id = $1 ORDER BY created_at DESC',
-            [req.params.equipmentId]
+        await client.query('BEGIN')
+
+        // Log transaction
+        await client.query(
+            `INSERT INTO inventory_transactions (equipment_id, type, quantity, notes)
+       VALUES ($1, $2, $3, $4)`,
+            [equipment_id, type, quantity, notes]
         )
+
+        // Update equipment totals
+        const change = type === 'inbound' ? quantity : -quantity
+        await client.query(
+            `UPDATE equipment 
+       SET quantity_total = quantity_total + $1, 
+           quantity_available = quantity_available + $1 
+       WHERE id = $2`,
+            [change, equipment_id]
+        )
+
+        await client.query('COMMIT')
+        res.json({ success: true })
+    } catch (err) {
+        await client.query('ROLLBACK')
+        res.status(500).json({ error: err.message })
+    } finally {
+        client.release()
+    }
+})
+
+// GET /api/inventory/po/:id/items
+router.get('/po/:id/items', authenticateAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM purchase_order_items WHERE purchase_order_id = $1', [req.params.id])
         res.json(result.rows)
     } catch (err) {
         res.status(500).json({ error: err.message })

@@ -123,7 +123,7 @@ export function AdminLayout({ title, children }) {
     { to: '/admin/bokningar', icon: '📅', label: 'Bokningar' },
     { to: '/admin/instruktorer', icon: '👥', label: 'Instruktörer' },
     ...(features.equipment ? [
-      { to: '/admin/utrustning', icon: '🤿', label: 'Utrustning' },
+      { to: '/admin/utrustning', icon: '📦', label: 'Artiklar' },
       { to: '/admin/lager', icon: '📦', label: 'Lager & Inköp' }
     ] : []),
     ...(features.invoicing ? [{ to: '/admin/fakturor', icon: '🧾', label: 'Fakturor' }] : []),
