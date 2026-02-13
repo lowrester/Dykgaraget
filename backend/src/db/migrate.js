@@ -333,6 +333,10 @@ async function run() {
       ON CONFLICT (key) DO NOTHING;
     `)
 
+    await runMigration('014_equipment_archived_at', `
+      ALTER TABLE equipment ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITH TIME ZONE;
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

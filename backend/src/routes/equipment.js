@@ -8,8 +8,44 @@ router.use(checkFeature('equipment'))
 // GET /api/equipment
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM equipment ORDER BY category, size')
+    const result = await pool.query('SELECT * FROM equipment WHERE archived_at IS NULL ORDER BY category, size')
     res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/equipment/archived (admin)
+router.get('/archived', authenticateAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM equipment WHERE archived_at IS NOT NULL ORDER BY archived_at DESC')
+    res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/equipment/bulk-archive (admin)
+router.post('/bulk-archive', authenticateAdmin, async (req, res) => {
+  try {
+    const { ids } = req.body
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'Inga ID:n angivna' })
+
+    await pool.query('UPDATE equipment SET archived_at = NOW(), is_active = false WHERE id = ANY($1)', [ids])
+    res.json({ message: `${ids.length} artiklar arkiverade` })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/equipment/bulk-restore (admin)
+router.post('/bulk-restore', authenticateAdmin, async (req, res) => {
+  try {
+    const { ids } = req.body
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'Inga ID:n angivna' })
+
+    await pool.query('UPDATE equipment SET archived_at = NULL WHERE id = ANY($1)', [ids])
+    res.json({ message: `${ids.length} artiklar återställda` })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

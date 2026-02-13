@@ -165,8 +165,9 @@ export const useCoursesStore = create((set) => ({
 }))
 
 // ── Equipment store ────────────────────────────────────────────
-export const useEquipmentStore = create((set) => ({
+export const useEquipmentStore = create((set, get) => ({
   equipment: [],
+  archived: [],
   loading: false,
   error: null,
 
@@ -175,6 +176,16 @@ export const useEquipmentStore = create((set) => ({
     try {
       const data = await client.get('/equipment')
       set({ equipment: data, loading: false })
+    } catch (err) {
+      set({ error: err.message, loading: false })
+    }
+  },
+
+  fetchArchived: async () => {
+    set({ loading: true, error: null })
+    try {
+      const data = await client.get('/equipment/archived')
+      set({ archived: data, loading: false })
     } catch (err) {
       set({ error: err.message, loading: false })
     }
@@ -194,8 +205,25 @@ export const useEquipmentStore = create((set) => ({
 
   remove: async (id) => {
     await client.delete(`/equipment/${id}`)
-    set((s) => ({ equipment: s.equipment.filter((e) => e.id !== id) }))
+    set((s) => ({
+      equipment: s.equipment.filter((e) => e.id !== id),
+      archived: s.archived.filter((e) => e.id !== id)
+    }))
   },
+
+  bulkArchive: async (ids) => {
+    await client.post('/equipment/bulk-archive', { ids })
+    set((s) => ({
+      equipment: s.equipment.filter(e => !ids.includes(e.id))
+    }))
+  },
+
+  bulkRestore: async (ids) => {
+    await client.post('/equipment/bulk-restore', { ids })
+    set((s) => ({
+      archived: s.archived.filter(e => !ids.includes(e.id))
+    }))
+  }
 }))
 
 // ── Instructors store ──────────────────────────────────────────

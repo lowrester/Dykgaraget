@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useEquipmentStore, useUIStore, useInventoryStore } from '../../store/index.js'
 import { AdminLayout, Card, Modal, Button, Input, Badge } from '../../components/common/index.jsx'
 
@@ -6,7 +7,7 @@ const EMPTY = { name: '', category: 'Övrigt', size: '', quantity_total: 1, quan
 const CATS = ['Våtdräkt', 'BCD', 'Mask', 'Regulator', 'Dator', 'Fenor', 'Torrdräkt', 'Merchandise', 'Tillbehör', 'Övrigt']
 
 export default function ManageArticles() {
-  const { equipment: articles, fetch, create, update, remove, loading } = useEquipmentStore()
+  const { equipment: articles, fetch, create, update, remove, bulkArchive, loading } = useEquipmentStore()
   const { transactions, fetchTransactions } = useInventoryStore()
   const { addToast, ask } = useUIStore()
   const [modal, setModal] = useState(false)
@@ -14,6 +15,7 @@ export default function ManageArticles() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [selected, setSelected] = useState([])
 
   useEffect(() => { fetch() }, [fetch])
 
@@ -21,6 +23,34 @@ export default function ManageArticles() {
   const openEdit = (e) => { setEditing(e); setForm({ ...e }); setModal(true) }
   const close = () => { setModal(false); setEditing(null) }
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  const toggleSelect = (id) => {
+    setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  const toggleSelectAll = () => {
+    if (selected.length === articles.length) setSelected([])
+    else setSelected(articles.map(a => a.id))
+  }
+
+  const handleBulkArchive = async () => {
+    const ok = await ask({
+      title: 'Arkivera artiklar?',
+      message: `Vill du arkivera ${selected.length} markerade artiklar? De kommer inte längre synas i butiken men finns kvar i arkivet.`,
+      type: 'warning',
+      confirmText: 'Arkivera markerade'
+    })
+    if (!ok) return
+
+    setSaving(true)
+    try {
+      await bulkArchive(selected)
+      addToast(`${selected.length} artiklar arkiverade`)
+      setSelected([])
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally { setSaving(false) }
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -61,15 +91,41 @@ export default function ManageArticles() {
 
   return (
     <AdminLayout title="Artiklar">
-      <div className="page-actions"><Button onClick={openNew}>+ Ny artikel</Button></div>
+      <div className="page-actions" style={{ display: 'flex', gap: '1rem' }}>
+        <Link to="/admin/arkiv" className="btn btn-ghost">📂 Visa arkiv</Link>
+        <Button onClick={openNew}>+ Ny artikel</Button>
+      </div>
+
+      {selected.length > 0 && (
+        <div style={{ background: 'var(--blue-900)', color: 'white', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'slideDown 0.2s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontWeight: 600 }}>{selected.length} artiklar markerade</span>
+            <button className="btn btn-sm btn-ghost" onClick={() => setSelected([])} style={{ color: 'var(--blue-200)' }}>Avmarkera alla</button>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button size="sm" variant="danger" onClick={handleBulkArchive} loading={saving}>Arkivera markerade</Button>
+          </div>
+        </div>
+      )}
+
       {loading ? <div className="spinner-wrapper"><div className="spinner" /></div> : (
         <Card>
           <table className="admin-table">
-            <thead><tr><th>Namn</th><th>Kategori</th><th>Status</th><th>Antal</th><th>Priser</th><th>Lägen</th><th>Åtgärder</th></tr></thead>
+            <thead>
+              <tr>
+                <th style={{ width: '40px' }}>
+                  <input type="checkbox" checked={selected.length === articles.length && articles.length > 0} onChange={toggleSelectAll} />
+                </th>
+                <th>Namn</th><th>Kategori</th><th>Status</th><th>Antal</th><th>Priser</th><th>Lägen</th><th>Åtgärder</th>
+              </tr>
+            </thead>
             <tbody>
-              {articles.length === 0 && <tr><td colSpan={7} className="empty">Inga artiklar registrerade</td></tr>}
+              {articles.length === 0 && <tr><td colSpan={8} className="empty">Inga artiklar registrerade</td></tr>}
               {articles.map((e) => (
-                <tr key={e.id}>
+                <tr key={e.id} className={selected.includes(e.id) ? 'selected-row' : ''}>
+                  <td>
+                    <input type="checkbox" checked={selected.includes(e.id)} onChange={() => toggleSelect(e.id)} />
+                  </td>
                   <td><strong>{e.name}</strong> <small style={{ color: '#666' }}>{e.size}</small></td>
                   <td>{e.category}</td>
                   <td><Badge variant={e.is_active ? 'success' : 'default'}>{e.is_active ? 'Aktiv' : 'Inaktiv'}</Badge></td>
