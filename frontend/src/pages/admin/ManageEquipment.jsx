@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
-import { useEquipmentStore, useUIStore } from '../../store/index.js'
-import { AdminLayout, Card, Modal, Button, Input } from '../../components/common/index.jsx'
+import { useEquipmentStore, useUIStore, useInventoryStore } from '../../store/index.js'
+import { AdminLayout, Card, Modal, Button, Input, Badge } from '../../components/common/index.jsx'
 
 const EMPTY = { name: '', category: 'Wetsuit', size: '', quantity_total: 1, quantity_available: 1, rental_price: 100, condition: 'god', is_active: true }
 const CATS = ['Wetsuit', 'BCD', 'Mask', 'Regulator', 'Computer', 'Fenor', 'Torrdräkt', 'Övrigt']
 
 export default function ManageEquipment() {
   const { equipment, fetch, create, update, remove, loading } = useEquipmentStore()
+  const { transactions, fetchTransactions } = useInventoryStore()
   const { addToast, ask } = useUIStore()
   const [modal, setModal] = useState(false)
+  const [historyModal, setHistoryModal] = useState(null)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -44,6 +46,13 @@ export default function ManageEquipment() {
     }
   }
 
+  const openHistory = async (item) => {
+    setHistoryModal(item)
+    try {
+      await fetchTransactions(item.id)
+    } catch (err) { addToast(err.message, 'error') }
+  }
+
   return (
     <AdminLayout title="Utrustning">
       <div className="page-actions"><Button onClick={openNew}>+ Ny artikel</Button></div>
@@ -63,6 +72,7 @@ export default function ManageEquipment() {
                   <td><span className={`badge ${e.is_active ? 'badge-success' : 'badge-default'}`}>{e.is_active ? 'Aktiv' : 'Inaktiv'}</span></td>
                   <td>
                     <button className="btn btn-sm btn-secondary" onClick={() => openEdit(e)}>Redigera</button>
+                    <button className="btn btn-sm btn-ghost" onClick={() => openHistory(e)} style={{ marginLeft: '0.5rem' }}>Historik</button>
                     <button className="btn btn-sm btn-danger" onClick={() => handleDelete(e)} style={{ marginLeft: '0.5rem' }}>Ta bort</button>
                   </td>
                 </tr>
@@ -92,6 +102,30 @@ export default function ManageEquipment() {
         <div className="modal-footer">
           <Button variant="secondary" onClick={close}>Avbryt</Button>
           <Button onClick={handleSave} loading={saving}>Spara</Button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!historyModal} onClose={() => setHistoryModal(null)} title={`Historik: ${historyModal?.name}`}>
+        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+          <table className="admin-table" style={{ fontSize: '0.85rem' }}>
+            <thead>
+              <tr><th>Datum</th><th>Typ</th><th>Antal</th><th>Ref</th></tr>
+            </thead>
+            <tbody>
+              {transactions.length === 0 && <tr><td colSpan={4} className="empty">Ingen historik hittades</td></tr>}
+              {transactions.map(t => (
+                <tr key={t.id}>
+                  <td>{new Date(t.created_at).toLocaleString()}</td>
+                  <td><Badge variant={t.type === 'inbound' ? 'success' : t.type === 'outbound' ? 'warning' : 'default'}>{t.type}</Badge></td>
+                  <td>{t.quantity > 0 ? `+${t.quantity}` : t.quantity}</td>
+                  <td>{t.reference_type || 'Manual'} {t.notes && <><br /><small>{t.notes}</small></>}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="modal-footer">
+          <Button variant="secondary" onClick={() => setHistoryModal(null)}>Stäng</Button>
         </div>
       </Modal>
     </AdminLayout>

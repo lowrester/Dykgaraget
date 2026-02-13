@@ -248,6 +248,69 @@ async function run() {
       );
     `)
 
+    await runMigration('008_invoice_compliance_updates', `
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS supply_date DATE;
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS buyer_vat_number VARCHAR(100);
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS notes TEXT;
+    `)
+
+    await runMigration('009_multi_vat_support', `
+      ALTER TABLE invoice_items ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5,4) DEFAULT 0.25;
+      ALTER TABLE invoices ADD COLUMN IF NOT EXISTS vat_summary JSONB DEFAULT '{}';
+    `)
+
+    await runMigration('010_inventory_system', `
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id          SERIAL PRIMARY KEY,
+        name        VARCHAR(200) NOT NULL,
+        contact_person VARCHAR(200),
+        email       VARCHAR(200),
+        phone       VARCHAR(50),
+        address     TEXT,
+        is_active   BOOLEAN DEFAULT true,
+        created_at  TIMESTAMP DEFAULT NOW(),
+        updated_at  TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS purchase_orders (
+        id            SERIAL PRIMARY KEY,
+        supplier_id   INT REFERENCES suppliers(id) ON DELETE SET NULL,
+        po_number     VARCHAR(50) UNIQUE NOT NULL,
+        status        VARCHAR(20) DEFAULT 'draft', -- draft, sent, received, cancelled
+        total_amount  NUMERIC(10,2) DEFAULT 0,
+        notes         TEXT,
+        sent_at       TIMESTAMP,
+        received_at   TIMESTAMP,
+        created_at    TIMESTAMP DEFAULT NOW(),
+        updated_at    TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS purchase_order_items (
+        id                SERIAL PRIMARY KEY,
+        purchase_order_id INT REFERENCES purchase_orders(id) ON DELETE CASCADE,
+        equipment_id      INT REFERENCES equipment(id) ON DELETE SET NULL,
+        description       TEXT NOT NULL,
+        quantity_ordered  INT NOT NULL,
+        quantity_received INT DEFAULT 0,
+        unit_price        NUMERIC(10,2) DEFAULT 0,
+        total_price       NUMERIC(10,2) DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id              SERIAL PRIMARY KEY,
+        equipment_id    INT REFERENCES equipment(id) ON DELETE CASCADE,
+        type            VARCHAR(30) NOT NULL, -- inbound, outbound, return, adjustment
+        quantity        INT NOT NULL,
+        reference_type  VARCHAR(50), -- purchase_order, invoice, manual
+        reference_id    INT,
+        notes           TEXT,
+        created_at      TIMESTAMP DEFAULT NOW(),
+        created_by      INT REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE SEQUENCE IF NOT EXISTS po_number_seq START 1;
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

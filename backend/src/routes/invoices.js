@@ -84,7 +84,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
 router.post('/manual', authenticateAdmin, async (req, res) => {
   const client = await pool.connect()
   try {
-    const { buyer_name, buyer_email, buyer_address, items, terms_days } = req.body
+    const { buyer_name, buyer_email, buyer_address, buyer_vat_number, items, terms_days, supply_date, notes } = req.body
     if (!buyer_name || !buyer_email || !items || !items.length) {
       return res.status(400).json({ error: 'Kunduppgifter och rader krävs' })
     }
@@ -93,17 +93,31 @@ router.post('/manual', authenticateAdmin, async (req, res) => {
 
     const prefixRes = await client.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
     const prefix = prefixRes.rows[0]?.value || 'DYK'
-    const vatRes = await client.query("SELECT value FROM settings WHERE key = 'invoice_vat_rate'")
-    const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
     const finalTermsDays = parseInt(terms_days || '30')
 
     let subtotal = 0
-    items.forEach(item => {
-      subtotal += parseFloat(item.unit_price) * parseFloat(item.quantity)
+    let totalVat = 0
+    const vatSummary = {} // { "0.25": { net: 100, vat: 25 }, "0.06": { net: 100, vat: 6 } }
+
+    const processedItems = items.map(item => {
+      const q = parseFloat(item.quantity)
+      const p = parseFloat(item.unit_price)
+      const r = parseFloat(item.vat_rate || 0.25)
+      const lineNet = q * p
+      const lineVat = lineNet * r
+
+      subtotal += lineNet
+      totalVat += lineVat
+
+      const rKey = r.toFixed(2)
+      if (!vatSummary[rKey]) vatSummary[rKey] = { net: 0, vat: 0 }
+      vatSummary[rKey].net += lineNet
+      vatSummary[rKey].vat += lineVat
+
+      return { ...item, total: (lineNet).toFixed(2), vat_rate: r }
     })
 
-    const vatAmount = subtotal * vatRate
-    const totalAmount = subtotal + vatAmount
+    const totalAmount = subtotal + totalVat
     const dueDate = new Date()
     dueDate.setDate(dueDate.getDate() + finalTermsDays)
 
@@ -111,20 +125,20 @@ router.post('/manual', authenticateAdmin, async (req, res) => {
 
     const invRes = await client.query(
       `INSERT INTO invoices
-         (invoice_number, buyer_name, buyer_email, buyer_address,
-          subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid', $10) RETURNING *`,
-      [invoiceNumber, buyer_name, buyer_email, buyer_address,
-        subtotal.toFixed(2), vatRate, vatAmount.toFixed(2), totalAmount.toFixed(2),
-        dueDate.toISOString().split('T')[0], finalTermsDays]
+         (invoice_number, buyer_name, buyer_email, buyer_address, buyer_vat_number,
+          subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days, supply_date, notes, vat_summary)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'unpaid', $11, $12, $13, $14) RETURNING *`,
+      [invoiceNumber, buyer_name, buyer_email, buyer_address, buyer_vat_number,
+        subtotal.toFixed(2), 0.25, totalVat.toFixed(2), totalAmount.toFixed(2),
+        dueDate.toISOString().split('T')[0], finalTermsDays, supply_date, notes, JSON.stringify(vatSummary)]
     )
     const invoice = invRes.rows[0]
 
-    for (const item of items) {
+    for (const item of processedItems) {
       await client.query(
-        `INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [invoice.id, item.description, item.quantity, item.unit_price, (item.quantity * item.unit_price).toFixed(2)]
+        `INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, total, vat_rate)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [invoice.id, item.description, item.quantity, item.unit_price, item.total, item.vat_rate]
       )
     }
 
@@ -141,21 +155,35 @@ router.post('/manual', authenticateAdmin, async (req, res) => {
 // POST /api/invoices/preview – generate preview PDF (unsaved)
 router.post('/preview', authenticateAdmin, async (req, res) => {
   try {
-    const { buyer_name, buyer_email, buyer_address, items, terms_days } = req.body
+    const { buyer_name, buyer_email, buyer_address, buyer_vat_number, items, terms_days, supply_date, notes } = req.body
 
     const prefixRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
     const prefix = prefixRes.rows[0]?.value || 'DYK'
-    const vatRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_vat_rate'")
-    const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
     const finalTermsDays = parseInt(terms_days || '30')
 
     let subtotal = 0
-    items.forEach(item => {
-      subtotal += parseFloat(item.unit_price) * parseFloat(item.quantity)
+    let totalVat = 0
+    const vatSummary = {}
+
+    const processedItems = items.map(item => {
+      const q = parseFloat(item.quantity)
+      const p = parseFloat(item.unit_price)
+      const r = parseFloat(item.vat_rate || 0.25)
+      const lineNet = q * p
+      const lineVat = lineNet * r
+
+      subtotal += lineNet
+      totalVat += lineVat
+
+      const rKey = r.toFixed(2)
+      if (!vatSummary[rKey]) vatSummary[rKey] = { net: 0, vat: 0 }
+      vatSummary[rKey].net += lineNet
+      vatSummary[rKey].vat += lineVat
+
+      return { ...item, total: lineNet, vat_rate: r }
     })
 
-    const vatAmount = subtotal * vatRate
-    const totalAmount = subtotal + vatAmount
+    const totalAmount = subtotal + totalVat
     const dueDate = new Date()
     dueDate.setDate(dueDate.getDate() + finalTermsDays)
 
@@ -167,12 +195,15 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       buyer_name,
       buyer_email,
       buyer_address,
+      buyer_vat_number,
+      supply_date,
+      notes,
       subtotal,
-      vat_rate: vatRate,
-      vat_amount: vatAmount,
+      vat_amount: totalVat,
       total_amount: totalAmount,
+      vat_summary: vatSummary,
       status: 'unpaid',
-      items: items.map(i => ({ ...i, total: i.quantity * i.unit_price }))
+      items: processedItems
     }
 
     const company = await getCompanySettings()

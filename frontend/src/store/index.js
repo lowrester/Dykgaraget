@@ -352,30 +352,55 @@ export const useUsersStore = create((set, get) => ({
   users: [],
   loading: false,
 
-  fetch: async () => {
+  remove: async (id) => {
+    await client.delete(`/users/${id}`)
+    set({ users: get().users.filter(u => u.id !== id) })
+  }
+}))
+
+// ── Inventory Store ──────────────────────────────────────────
+export const useInventoryStore = create((set, get) => ({
+  suppliers: [],
+  purchaseOrders: [],
+  transactions: [],
+  loading: false,
+
+  fetchSuppliers: async () => {
     set({ loading: true })
     try {
-      const resp = await api.get('/users')
-      set({ users: resp.data })
-    } finally {
-      set({ loading: false })
-    }
+      const data = await client.get('/inventory/suppliers')
+      set({ suppliers: data, loading: false })
+    } catch (err) { set({ loading: false }); throw err }
   },
 
-  create: async (data) => {
-    const resp = await api.post('/users', data)
-    set({ users: [...get().users, resp.data].sort((a, b) => a.username.localeCompare(b.username)) })
-    return resp.data
+  createSupplier: async (payload) => {
+    const data = await client.post('/inventory/suppliers', payload)
+    set(s => ({ suppliers: [...s.suppliers, data] }))
+    return data
   },
 
-  update: async (id, data) => {
-    const resp = await api.put(`/users/${id}`, data)
-    set({ users: get().users.map(u => u.id === id ? { ...u, ...resp.data } : u) })
-    return resp.data
+  fetchPO: async () => {
+    set({ loading: true })
+    try {
+      const data = await client.get('/inventory/po')
+      set({ purchaseOrders: data, loading: false })
+    } catch (err) { set({ loading: false }); throw err }
   },
 
-  remove: async (id) => {
-    await api.delete(`/users/${id}`)
-    set({ users: get().users.filter(u => u.id !== id) })
+  createPO: async (payload) => {
+    const data = await client.post('/inventory/po', payload)
+    set(s => ({ purchaseOrders: [data, ...s.purchaseOrders] }))
+    return data
+  },
+
+  receivePO: async (id, items) => {
+    await client.post(`/inventory/po/${id}/receive`, { items_received: items })
+    await get().fetchPO()
+  },
+
+  fetchTransactions: async (equipmentId) => {
+    const data = await client.get(`/inventory/transactions/${equipmentId}`)
+    set({ transactions: data })
+    return data
   }
 }))

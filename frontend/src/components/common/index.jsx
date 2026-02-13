@@ -122,10 +122,13 @@ export function AdminLayout({ title, children }) {
     { to: '/admin/kurser', icon: '📚', label: 'Kurser' },
     { to: '/admin/bokningar', icon: '📅', label: 'Bokningar' },
     { to: '/admin/instruktorer', icon: '👥', label: 'Instruktörer' },
-    { to: '/admin/innehall', icon: '✍️', label: 'Hantera innehåll' },
-    ...(features.equipment ? [{ to: '/admin/utrustning', icon: '🤿', label: 'Utrustning' }] : []),
+    ...(features.equipment ? [
+      { to: '/admin/utrustning', icon: '🤿', label: 'Utrustning' },
+      { to: '/admin/lager', icon: '📦', label: 'Lager & Inköp' }
+    ] : []),
     ...(features.invoicing ? [{ to: '/admin/fakturor', icon: '🧾', label: 'Fakturor' }] : []),
     { to: '/admin/installningar', icon: '⚙️', label: 'Inställningar', separator: true },
+    { to: '/admin/innehall', icon: '✍️', label: 'Hantera innehåll' },
     { to: '/admin/kunder', icon: '👥', label: 'Kunder' },
     { to: '/admin/anvandare', icon: '👥', label: 'Användare' },
   ]

@@ -63,65 +63,99 @@ export async function generateInvoicePDF(invoiceId) {
     .text(`Datum: ${fmtDate(inv.invoice_date)}`, 350, 103, { align: 'right' })
     .text(`Förfaller: ${fmtDate(inv.due_date)}`, 350, 116, { align: 'right' })
 
+  if (inv.supply_date) {
+    doc.text(`Leveransdatum: ${fmtDate(inv.supply_date)}`, 350, 129, { align: 'right' })
+  }
+
   // ── Mottagare ────────────────────────────────────────────
   doc.fontSize(10).font('Helvetica-Bold').text('Faktureras till:', 50, 175)
   doc.font('Helvetica').fontSize(10)
   if (inv.buyer_name) doc.text(inv.buyer_name, 50, 193)
   if (inv.buyer_address) doc.text(inv.buyer_address, 50, 206)
   if (inv.buyer_email) doc.text(inv.buyer_email, 50, 219)
+  if (inv.buyer_vat_number) doc.text(`VAT: ${inv.buyer_vat_number}`, 50, 232)
 
   // ── Tabellhuvud ──────────────────────────────────────────
   const tableTop = 280
-  doc.moveTo(50, tableTop - 5).lineTo(545, tableTop - 5).strokeColor('#DDDDDD').stroke()
-  doc.font('Helvetica-Bold').fontSize(9)
-    .text('Beskrivning', 50, tableTop)
-    .text('Antal', 360, tableTop, { width: 50, align: 'right' })
-    .text('Á-pris', 415, tableTop, { width: 60, align: 'right' })
+  doc.rect(50, tableTop - 5, 495, 20).fill('#F9FAFB')
+  doc.fillColor('#4B5563').font('Helvetica-Bold').fontSize(9)
+    .text('Beskrivning', 60, tableTop)
+    .text('Antal', 310, tableTop, { width: 50, align: 'right' })
+    .text('À-pris', 365, tableTop, { width: 60, align: 'right' })
+    .text('Moms', 430, tableTop, { width: 40, align: 'right' })
     .text('Summa', 480, tableTop, { width: 65, align: 'right' })
-  doc.moveTo(50, tableTop + 15).lineTo(545, tableTop + 15).strokeColor('#DDDDDD').stroke()
+  doc.moveTo(50, tableTop + 15).lineTo(545, tableTop + 15).strokeColor('#E5E7EB').stroke()
+  doc.fillColor('#000000')
 
   // ── Rader ────────────────────────────────────────────────
-  const items = await pool.query(
+  const items = inv.items || (await pool.query(
     'SELECT * FROM invoice_items WHERE invoice_id = $1',
     [invoiceId]
-  ).catch(() => ({ rows: [] }))
+  ).then(r => r.rows).catch(() => []))
 
-  let y = tableTop + 22
-  const rows = items.rows.length > 0
-    ? items.rows
-    : [{ description: 'Tjänst enligt bokning', quantity: 1, unit_price: inv.subtotal, total: inv.subtotal }]
-
+  let y = tableTop + 25
   doc.font('Helvetica').fontSize(9)
-  rows.forEach(item => {
-    doc.text(item.description, 50, y, { width: 300 })
-      .text(String(item.quantity), 360, y, { width: 50, align: 'right' })
-      .text(fmtSEK(item.unit_price), 415, y, { width: 60, align: 'right' })
+  items.forEach(item => {
+    const textHeight = doc.heightOfString(item.description, { width: 240 })
+    doc.text(item.description, 60, y, { width: 240 })
+      .text(String(item.quantity), 310, y, { width: 50, align: 'right' })
+      .text(fmtSEK(item.unit_price), 365, y, { width: 60, align: 'right' })
+      .text(`${Math.round((item.vat_rate || 0.25) * 100)}%`, 430, y, { width: 40, align: 'right' })
       .text(fmtSEK(item.total), 480, y, { width: 65, align: 'right' })
-    y += 18
+
+    y += Math.max(18, textHeight + 5)
+    doc.moveTo(50, y - 2).lineTo(545, y - 2).strokeColor('#F3F4F6').stroke()
   })
 
-  doc.moveTo(50, y + 5).lineTo(545, y + 5).strokeColor('#DDDDDD').stroke()
-
-  // ── Summering ────────────────────────────────────────────
+  // ── Summering & VAT-Split ────────────────────────────────
   y += 15
+  if (y > 700) { doc.addPage(); y = 50 }
+
   doc.font('Helvetica').fontSize(9)
-    .text('Netto:', 380, y, { width: 95, align: 'right' })
+    .text('Netto totalt:', 380, y, { width: 95, align: 'right' })
     .text(fmtSEK(inv.subtotal), 480, y, { width: 65, align: 'right' })
   y += 14
-  const vatLabel = `Moms ${Math.round((inv.vat_rate || 0.25) * 100)} %:`
-  doc.text(vatLabel, 380, y, { width: 95, align: 'right' })
-    .text(fmtSEK(inv.vat_amount), 480, y, { width: 65, align: 'right' })
-  y += 14
+
+  // Breakdown of VAT
+  const summary = inv.vat_summary || {}
+  Object.keys(summary).sort().forEach(rateStr => {
+    const rateVal = parseFloat(rateStr)
+    const data = summary[rateStr]
+    doc.fontSize(8).fillColor('#6B7280')
+      .text(`Moms (${Math.round(rateVal * 100)}% på ${fmtSEK(data.net)}):`, 350, y, { width: 125, align: 'right' })
+      .text(fmtSEK(data.vat), 480, y, { width: 65, align: 'right' })
+    y += 12
+  })
+  doc.fillColor('#000000').fontSize(9)
+
+  if (Object.keys(summary).length === 0) {
+    const vatLabel = `Moms ${Math.round((inv.vat_rate || 0.25) * 100)}%:`
+    doc.text(vatLabel, 380, y, { width: 95, align: 'right' })
+      .text(fmtSEK(inv.vat_amount), 480, y, { width: 65, align: 'right' })
+    y += 14
+  }
+  y += 6
 
   doc.font('Helvetica-Bold').fontSize(11)
-  doc.rect(370, y - 3, 175, 18).fillAndStroke('#0066CC', '#0066CC')
+  doc.rect(370, y - 5, 175, 22).fill('#0066CC')
   doc.fillColor('#FFFFFF')
     .text('Att betala:', 380, y, { width: 95, align: 'right' })
     .text(fmtSEK(inv.total_amount), 480, y, { width: 65, align: 'right' })
   doc.fillColor('#000000')
 
+  // ── Notes ────────────────────────────────────────────────
+  if (inv.notes) {
+    y += 40
+    if (y > 700) { doc.addPage(); y = 50 }
+    doc.fontSize(8).font('Helvetica-Oblique').fillColor('#6B7280')
+      .text('Noteringar:', 50, y)
+      .text(inv.notes, 50, y + 10, { width: 495 })
+    doc.fillColor('#000000').font('Helvetica')
+  }
+
   // ── Betalningsinfo ───────────────────────────────────────
-  y += 40
+  y += 60
+  if (y > 700) { doc.addPage(); y = 50 }
   doc.font('Helvetica-Bold').fontSize(9).text('Betalningsinformation:', 50, y)
   doc.font('Helvetica').fontSize(9)
     .text(`Bankgiro / konto: ${co.bank_account || '–'}`, 50, y + 14)

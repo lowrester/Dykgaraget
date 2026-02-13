@@ -30,6 +30,7 @@ import FeatureSettings from './pages/admin/FeatureSettings.jsx'
 import ManageContent from './pages/admin/ManageContent.jsx'
 import ManageUsers from './pages/admin/ManageUsers.jsx'
 import ManageCustomers from './pages/admin/ManageCustomers.jsx'
+import ManageLager from './pages/admin/ManageLager.jsx'
 
 // Stripe redirect-sidor (inline — enkla)
 function PaymentSuccess() {
@@ -134,6 +135,7 @@ export default function App() {
         <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/kurser" element={<ProtectedRoute><ManageCourses /></ProtectedRoute>} />
         <Route path="/admin/utrustning" element={<ProtectedRoute><ManageEquipment /></ProtectedRoute>} />
+        <Route path="/admin/lager" element={<ProtectedRoute><ManageLager /></ProtectedRoute>} />
         <Route path="/admin/instruktorer" element={<ProtectedRoute><ManageInstructors /></ProtectedRoute>} />
         <Route path="/admin/bokningar" element={<ProtectedRoute><ManageBookings /></ProtectedRoute>} />
         <Route path="/admin/fakturor" element={<ProtectedRoute><ManageInvoices /></ProtectedRoute>} />
