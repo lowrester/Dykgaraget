@@ -352,9 +352,42 @@ export const useUsersStore = create((set, get) => ({
   users: [],
   loading: false,
 
+  fetch: async () => {
+    set({ loading: true })
+    try {
+      const data = await client.get('/users')
+      set({ users: data })
+    } finally { set({ loading: false }) }
+  },
+
+  create: async (data) => {
+    const resp = await client.post('/users', data)
+    set({ users: [...get().users, resp].sort((a, b) => a.username.localeCompare(b.username)) })
+    return resp
+  },
+
+  update: async (id, data) => {
+    const resp = await client.put(`/users/${id}`, data)
+    set({ users: get().users.map(u => u.id === id ? { ...u, ...resp } : u) })
+    return resp
+  },
+
   remove: async (id) => {
     await client.delete(`/users/${id}`)
     set({ users: get().users.filter(u => u.id !== id) })
+  }
+}))
+
+// ── Health store ──────────────────────────────────────────────
+export const useHealthStore = create((set) => ({
+  status: { backend: 'offline', api: 'unknown' },
+  check: async () => {
+    try {
+      const data = await client.get('/health')
+      set({ status: { backend: 'online', api: data.status } })
+    } catch {
+      set({ status: { backend: 'offline', api: 'error' } })
+    }
   }
 }))
 
