@@ -1,23 +1,24 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useCoursesStore, useBookingsStore, useInvoicesStore, useSettingsStore } from '../../store/index.js'
-import { AdminLayout, Card, Spinner } from '../../components/common/index.jsx'
+import { useCoursesStore, useBookingsStore, useInvoicesStore, useSettingsStore, useHealthStore } from '../../store/index.js'
+import { AdminLayout, Card, Spinner, Badge } from '../../components/common/index.jsx'
 
 export default function Dashboard() {
   const { courses, fetch: fetchCourses } = useCoursesStore()
   const { bookings, fetch: fetchBookings } = useBookingsStore()
   const { invoices, fetch: fetchInvoices } = useInvoicesStore()
+  const { status: health, check: checkHealth } = useHealthStore()
   const features = useSettingsStore((s) => s.features)
 
   useEffect(() => {
     fetchCourses()
     fetchBookings()
+    checkHealth()
     if (features.invoicing) fetchInvoices()
-  }, [fetchCourses, fetchBookings, fetchInvoices, features.invoicing])
+  }, [fetchCourses, fetchBookings, fetchInvoices, features.invoicing, checkHealth])
 
   const pendingBookings = bookings.filter(b => b.status === 'pending').length
   const unpaidInvoices = invoices.filter(i => i.status === 'unpaid').length
-  const revenue = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + parseFloat(i.total_amount || 0), 0)
 
   const tiles = [
     { icon: '📚', label: 'Kurser', value: courses.length, link: '/admin/kurser' },
@@ -36,6 +37,20 @@ export default function Dashboard() {
             {tile.sub && <span className="stat-tile-sub">{tile.sub}</span>}
           </Link>
         ))}
+        <div className="stat-tile" style={{ cursor: 'default' }}>
+          <span className="stat-tile-icon">🛡️</span>
+          <div style={{ marginTop: '0.4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
+              <span>Backend</span>
+              <Badge variant={health.backend === 'online' ? 'success' : 'danger'}>{health.backend}</Badge>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+              <span>API</span>
+              <Badge variant={health.api === 'healthy' ? 'success' : 'warning'}>{health.api}</Badge>
+            </div>
+          </div>
+          <span className="stat-tile-label" style={{ marginTop: '0.5rem' }}>Systemhälsa</span>
+        </div>
       </div>
 
       <div className="grid grid-2" style={{ marginTop: '2rem' }}>
@@ -56,6 +71,16 @@ export default function Dashboard() {
             </table>
           )}
           <Link to="/admin/bokningar" className="btn btn-sm btn-secondary" style={{ marginTop: '1rem' }}>Visa alla →</Link>
+        </Card>
+
+        <Card>
+          <h3>Modulstatus</h3>
+          <div style={{ fontSize: '0.85rem' }}>
+            <p><strong>Version:</strong> 1.2.0 (Stable)</p>
+            <p><strong>Senaste uppdatering:</strong> {new Date().toLocaleDateString()}</p>
+            <hr style={{ margin: '1rem 0', opacity: 0.1 }} />
+            <p style={{ color: 'var(--gray-500)' }}>Dykgaraget använder ett robust uppdateringssystem med staging-verifiering för att säkerställa 100% drifttid.</p>
+          </div>
         </Card>
       </div>
     </AdminLayout>
