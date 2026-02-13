@@ -25,6 +25,12 @@ const INVOICE_LABELS = {
   invoice_prefix: 'Fakturanummer-prefix',
 }
 
+const EMAIL_LABELS = {
+  email_sendgrid_key: 'SendGrid API Key',
+  email_from: 'Avsändar-epost',
+  email_from_name: 'Avsändarnamn',
+}
+
 const CONTENT_GROUP_LABELS = {
   home: 'Hem-sidan',
   courses: 'Kurser-sidan',
@@ -84,6 +90,7 @@ export default function FeatureSettings() {
 
   const companySettings = settings.filter(s => s.category === 'company')
   const invoiceSettings = settings.filter(s => s.category === 'invoicing')
+  const emailSettings = settings.filter(s => s.category === 'email' || s.key.startsWith('email_'))
   const contentSettings = settings.filter(s => s.key.startsWith('content_'))
   const paymentSettings = settings.filter(s => s.category === 'payment' || s.key.startsWith('stripe_'))
 
@@ -98,6 +105,7 @@ export default function FeatureSettings() {
   const tabs = [
     { id: 'modules', label: 'Moduler', icon: '🧩' },
     { id: 'info', label: 'Företag & Faktura', icon: '🏢' },
+    { id: 'email', label: 'E-post', icon: '✉️' },
     { id: 'content', label: 'Webb-innehåll', icon: '✍️' },
     { id: 'payment', label: 'Betal-API', icon: '💳' },
     { id: 'system', label: 'Systemstatus', icon: '🛡️' },
@@ -222,6 +230,49 @@ export default function FeatureSettings() {
                 </Card>
               ))}
             </div>
+          )}
+
+          {/* ✉️ TAB: Email */}
+          {activeTab === 'email' && (
+            <Card>
+              <h2 style={{ marginBottom: '1.5rem' }}>E-postinställningar</h2>
+              <div style={{ padding: '1rem', background: 'var(--blue-50)', borderRadius: '8px', border: '1px solid var(--blue-100)', marginBottom: '2rem' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--blue-700)', margin: 0 }}>
+                  Dessa inställningar används för automatiska bekräftelser och fakturor.
+                  Standardmetoden är <strong>SendGrid</strong>. Om ingen nyckel anges används en lokal loggmetod för test.
+                </p>
+              </div>
+              <table className="admin-table">
+                <tbody>
+                  {emailSettings.length === 0 && <tr><td className="empty">Inga e-postinställningar hittades i databasen</td></tr>}
+                  {emailSettings.map(s => (
+                    <tr key={s.key}>
+                      <td style={{ width: '40%', fontWeight: 600 }}>{EMAIL_LABELS[s.key] || s.description || s.key}</td>
+                      <td>
+                        {editKey === s.key ? (
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <Input
+                              type={s.key.includes('key') ? 'password' : 'text'}
+                              value={editValue}
+                              onChange={e => setEditValue(e.target.value)}
+                              style={{ marginBottom: 0 }}
+                              autoFocus
+                            />
+                            <Button size="sm" onClick={saveEdit} loading={saving}>Ok</Button>
+                            <Button size="sm" variant="secondary" onClick={cancelEdit}>X</Button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>{s.key.includes('key') ? '********' : (s.value || '—')}</span>
+                            <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)}>✎</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
           )}
 
           {/* 💳 TAB: Payment */}

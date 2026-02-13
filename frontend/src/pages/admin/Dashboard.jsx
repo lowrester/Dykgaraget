@@ -39,7 +39,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid grid-2" style={{ marginTop: '2rem' }}>
+      <div style={{ marginTop: '2rem' }}>
         <Card>
           <h3>Senaste bokningar</h3>
           {bookings.length === 0 ? <p className="empty">Inga bokningar ännu</p> : (
@@ -57,16 +57,6 @@ export default function Dashboard() {
             </table>
           )}
           <Link to="/admin/bokningar" className="btn btn-sm btn-secondary" style={{ marginTop: '1rem' }}>Visa alla →</Link>
-        </Card>
-
-        <Card>
-          <h3>Modulstatus</h3>
-          <div style={{ fontSize: '0.85rem' }}>
-            <p><strong>Version:</strong> 1.2.0 (Stable)</p>
-            <p><strong>Senaste uppdatering:</strong> {new Date().toLocaleDateString()}</p>
-            <hr style={{ margin: '1rem 0', opacity: 0.1 }} />
-            <p style={{ color: 'var(--gray-500)' }}>Dykgaraget använder ett robust uppdateringssystem med staging-verifiering för att säkerställa 100% drifttid.</p>
-          </div>
         </Card>
       </div>
     </AdminLayout>

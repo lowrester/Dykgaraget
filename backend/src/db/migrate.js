@@ -355,7 +355,10 @@ async function run() {
       ('content_contact_hours_title', 'Öppettider', 'content', 'Kontakt: Öppettider Titel'),
       ('content_contact_hours_monfri', '09:00 – 18:00', 'content', 'Kontakt: Tid Mån-Fre'),
       ('content_contact_hours_sat', '09:00 – 15:00', 'content', 'Kontakt: Tid Lördag'),
-      ('content_contact_hours_sun', 'Stängt', 'content', 'Kontakt: Tid Söndag')
+      ('content_contact_hours_sun', 'Stängt', 'content', 'Kontakt: Tid Söndag'),
+      ('email_sendgrid_key', '', 'email', 'SendGrid API Key'),
+      ('email_from', 'info@dykgaraget.se', 'email', 'Avsändar-epost'),
+      ('email_from_name', 'Dykgaraget', 'email', 'Avsändarnamn')
       ON CONFLICT (key) DO NOTHING;
     `)
 
