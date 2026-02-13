@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useSettingsStore, useUIStore } from '../../store/index.js'
-import { AdminLayout, Card, Spinner, Button } from '../../components/common/index.jsx'
+import { useSettingsStore, useUIStore, useHealthStore } from '../../store/index.js'
+import { AdminLayout, Card, Spinner, Button, Badge, Input, Textarea } from '../../components/common/index.jsx'
 
 const FEATURE_META = {
   equipment: { label: 'Utrustningsmodul', icon: '🤿', desc: 'Utrustningshantering, inventarie och uthyrning vid bokning.', deps: [] },
@@ -25,15 +25,29 @@ const INVOICE_LABELS = {
   invoice_prefix: 'Fakturanummer-prefix',
 }
 
+const CONTENT_GROUP_LABELS = {
+  home: 'Hem-sidan',
+  courses: 'Kurser-sidan',
+  contact: 'Kontakt-sidan',
+  common: 'Gemensamt'
+}
+
 export default function FeatureSettings() {
-  const { features, settings, fetchFeatures, fetchSettings, updateSetting } = useSettingsStore()
+  const { features, settings, fetchFeatures, fetchSettings, updateSetting, loading } = useSettingsStore()
+  const { status: health, check: checkHealth } = useHealthStore()
   const { addToast, ask } = useUIStore()
+  const [activeTab, setActiveTab] = useState('modules') // modules, info, content, system, payment
+
   const [toggling, setToggling] = useState(false)
-  const [editKey, setEditKey] = useState(null)   // vilket settings-nyckel redigeras
+  const [editKey, setEditKey] = useState(null)
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchSettings(); fetchFeatures() }, [fetchSettings, fetchFeatures])
+  useEffect(() => {
+    fetchSettings()
+    fetchFeatures()
+    checkHealth()
+  }, [fetchSettings, fetchFeatures, checkHealth])
 
   const handleToggle = async (key, currentValue) => {
     const newValue = !currentValue
@@ -50,9 +64,8 @@ export default function FeatureSettings() {
     try {
       await updateSetting(`feature_${key}`, String(newValue))
       addToast(`${meta.label} ${newValue ? 'aktiverad' : 'inaktiverad'}`)
-    } catch (err) {
-      addToast(err.message, 'error')
-    } finally { setToggling(false) }
+    } catch (err) { addToast(err.message, 'error') }
+    finally { setToggling(false) }
   }
 
   const startEdit = (key, value) => { setEditKey(key); setEditValue(value || '') }
@@ -65,128 +78,212 @@ export default function FeatureSettings() {
       await updateSetting(editKey, editValue)
       addToast('Inställning sparad')
       cancelEdit()
-    } catch (err) {
-      addToast(err.message, 'error')
-    } finally { setSaving(false) }
+    } catch (err) { addToast(err.message, 'error') }
+    finally { setSaving(false) }
   }
-
-  const getSetting = (key) => settings.find(s => s.key === key)?.value || ''
 
   const companySettings = settings.filter(s => s.category === 'company')
   const invoiceSettings = settings.filter(s => s.category === 'invoicing')
+  const contentSettings = settings.filter(s => s.key.startsWith('content_'))
+  const paymentSettings = settings.filter(s => s.category === 'payment' || s.key.startsWith('stripe_'))
+
+  // Group content
+  const contentGroups = contentSettings.reduce((acc, s) => {
+    const groupName = s.key.split('_')[1] || 'Övrigt'
+    if (!acc[groupName]) acc[groupName] = []
+    acc[groupName].push(s)
+    return acc
+  }, {})
+
+  const tabs = [
+    { id: 'modules', label: 'Moduler', icon: '🧩' },
+    { id: 'info', label: 'Företag & Faktura', icon: '🏢' },
+    { id: 'content', label: 'Webb-innehåll', icon: '✍️' },
+    { id: 'payment', label: 'Betal-API', icon: '💳' },
+    { id: 'system', label: 'Systemstatus', icon: '🛡️' },
+  ]
 
   return (
     <AdminLayout title="Inställningar">
+      <div className="tabs" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', borderBottom: '1px solid var(--gray-200)' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '0.75rem 1rem', border: 'none', background: 'none',
+              fontWeight: activeTab === tab.id ? 700 : 400,
+              borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : 'none',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
+            }}
+          >
+            <span>{tab.icon}</span> {tab.label}
+          </button>
+        ))}
+      </div>
 
-      {/* ── Moduler ─────────────────────────────────── */}
-      <Card style={{ marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem' }}>Moduler</h2>
-        <div className="feature-grid">
-          {Object.entries(FEATURE_META).map(([key, meta]) => {
-            const enabled = features[key]
-            const blocked = meta.deps.some(dep => !features[dep])
-            return (
-              <div key={key} className={`feature-card ${enabled ? 'enabled' : ''} ${blocked ? 'blocked' : ''}`}>
-                <div className="feature-icon">{meta.icon}</div>
-                <div className="feature-info">
-                  <h3>{meta.label}</h3>
-                  <p>{meta.desc}</p>
-                  {blocked && <p className="feature-dep-warning">⚠ Kräver: {meta.deps.map(d => FEATURE_META[d]?.label).join(', ')}</p>}
-                  {meta.required_by?.length > 0 && enabled && (
-                    <p className="feature-dep-info">ℹ Krävs av: {meta.required_by.map(d => FEATURE_META[d]?.label).join(', ')}</p>
-                  )}
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" checked={!!enabled} disabled={toggling || blocked} onChange={() => handleToggle(key, enabled)} />
-                  <span className="toggle-slider" />
-                </label>
+      {loading && settings.length === 0 ? <Spinner /> : (
+        <>
+          {/* 🧩 TAB: Modules */}
+          {activeTab === 'modules' && (
+            <Card>
+              <h2 style={{ marginBottom: '1.5rem' }}>Modulhantering</h2>
+              <div className="feature-grid">
+                {Object.entries(FEATURE_META).map(([key, meta]) => {
+                  const enabled = features[key]
+                  const blocked = meta.deps.some(dep => !features[dep])
+                  return (
+                    <div key={key} className={`feature-card ${enabled ? 'enabled' : ''} ${blocked ? 'blocked' : ''}`}>
+                      <div className="feature-icon">{meta.icon}</div>
+                      <div className="feature-info">
+                        <h3>{meta.label}</h3>
+                        <p>{meta.desc}</p>
+                        {blocked && <p className="feature-dep-warning">⚠ Kräver: {meta.deps.map(d => FEATURE_META[d]?.label).join(', ')}</p>}
+                      </div>
+                      <label className="toggle-switch">
+                        <input type="checkbox" checked={!!enabled} disabled={toggling || blocked} onChange={() => handleToggle(key, enabled)} />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
-        </div>
-        {toggling && <div style={{ marginTop: '1rem' }}><Spinner text="Uppdaterar..." /></div>}
-      </Card>
+              {toggling && <div style={{ marginTop: '1rem' }}><Spinner text="Uppdaterar..." /></div>}
+            </Card>
+          )}
 
-      {/* ── Företagsinformation (redigerbart) ────────── */}
-      {companySettings.length > 0 && (
-        <Card style={{ marginBottom: '2rem' }}>
-          <h2 style={{ marginBottom: '0.5rem' }}>Företagsinformation</h2>
-          <p style={{ color: 'var(--gray-500)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-            Visas i genererade PDF-fakturor.
-          </p>
-          <table className="admin-table">
-            <tbody>
-              {companySettings.map(s => (
-                <tr key={s.key}>
-                  <td style={{ width: '38%', fontWeight: 600 }}>
-                    {COMPANY_LABELS[s.key] || s.description || s.key}
-                  </td>
-                  <td>
-                    {editKey === s.key ? (
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input className="form-input" style={{ marginBottom: 0 }} autoFocus
-                          value={editValue} onChange={e => setEditValue(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }} />
-                        <Button size="sm" onClick={saveEdit} loading={saving}>Spara</Button>
-                        <Button size="sm" variant="secondary" onClick={cancelEdit}>Avbryt</Button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ color: s.value ? 'var(--gray-700)' : 'var(--gray-300)', fontStyle: s.value ? 'normal' : 'italic' }}>
-                          {s.value || 'Ej angett'}
-                        </span>
-                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)} style={{ marginLeft: 'auto', opacity: 0.7 }}>
-                          ✎ Redigera
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+          {/* 🏢 TAB: Info */}
+          {activeTab === 'info' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <Card>
+                <h2>Företagsinformation</h2>
+                <table className="admin-table">
+                  <tbody>
+                    {companySettings.map(s => (
+                      <tr key={s.key}>
+                        <td style={{ width: '40%', fontWeight: 600 }}>{COMPANY_LABELS[s.key] || s.description || s.key}</td>
+                        <td>
+                          {editKey === s.key ? (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}><Input value={editValue} onChange={e => setEditValue(e.target.value)} style={{ marginBottom: 0 }} autoFocus /><Button size="sm" onClick={saveEdit} loading={saving}>Ok</Button><Button size="sm" variant="secondary" onClick={cancelEdit}>X</Button></div>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{s.value || '—'}</span><button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)}>✎</button></div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+              <Card>
+                <h2>Fakturainställningar</h2>
+                <table className="admin-table">
+                  <tbody>
+                    {invoiceSettings.map(s => (
+                      <tr key={s.key}>
+                        <td style={{ width: '40%', fontWeight: 600 }}>{INVOICE_LABELS[s.key] || s.description || s.key}</td>
+                        <td>
+                          {editKey === s.key ? (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}><Input value={editValue} onChange={e => setEditValue(e.target.value)} style={{ marginBottom: 0 }} autoFocus /><Button size="sm" onClick={saveEdit} loading={saving}>Ok</Button><Button size="sm" variant="secondary" onClick={cancelEdit}>X</Button></div>
+                          ) : (
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{s.value || '—'}</span><button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)}>✎</button></div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
+          )}
 
-      {/* ── Fakturainställningar (redigerbart) ──────── */}
-      {invoiceSettings.length > 0 && (
-        <Card>
-          <h2 style={{ marginBottom: '0.5rem' }}>Fakturainställningar</h2>
-          <p style={{ color: 'var(--gray-500)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-            Inställningar för fakturagenerering och betalningsvillkor.
-          </p>
-          <table className="admin-table">
-            <tbody>
-              {invoiceSettings.map(s => (
-                <tr key={s.key}>
-                  <td style={{ width: '38%', fontWeight: 600 }}>
-                    {INVOICE_LABELS[s.key] || s.description || s.key}
-                  </td>
-                  <td>
-                    {editKey === s.key ? (
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <input className="form-input" style={{ marginBottom: 0 }} autoFocus
-                          value={editValue} onChange={e => setEditValue(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }} />
-                        <Button size="sm" onClick={saveEdit} loading={saving}>Spara</Button>
-                        <Button size="sm" variant="secondary" onClick={cancelEdit}>Avbryt</Button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span style={{ color: s.value ? 'var(--gray-700)' : 'var(--gray-300)', fontStyle: s.value ? 'normal' : 'italic' }}>
-                          {s.value || 'Ej angett'}
-                        </span>
-                        <button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)} style={{ marginLeft: 'auto', opacity: 0.7 }}>
-                          ✎ Redigera
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
+          {/* ✍️ TAB: Content */}
+          {activeTab === 'content' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              {Object.entries(contentGroups).map(([groupId, items]) => (
+                <Card key={groupId}>
+                  <h2 style={{ textTransform: 'capitalize' }}>{CONTENT_GROUP_LABELS[groupId] || groupId}</h2>
+                  <table className="admin-table">
+                    <tbody>
+                      {items.map(s => (
+                        <tr key={s.key}>
+                          <td style={{ width: '30%', fontWeight: 600, fontSize: '0.85rem' }}>{s.description || s.key.replace('content_', '')}</td>
+                          <td>
+                            {editKey === s.key ? (
+                              <div style={{ display: 'flex', gap: '0.5rem' }}><Textarea value={editValue} onChange={e => setEditValue(e.target.value)} style={{ marginBottom: 0 }} autoFocus /><Button size="sm" onClick={saveEdit} loading={saving}>Ok</Button><Button size="sm" variant="secondary" onClick={cancelEdit}>X</Button></div>
+                            ) : (
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>{s.value}</span><button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)}>✎</button></div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
               ))}
-            </tbody>
-          </table>
-        </Card>
+            </div>
+          )}
+
+          {/* 💳 TAB: Payment */}
+          {activeTab === 'payment' && (
+            <Card>
+              <h2 style={{ marginBottom: '0.5rem' }}>Betalnings-API (Stripe)</h2>
+              <p style={{ color: 'var(--gray-500)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Hantera nycklar och konfiguration för betalningsintegration.</p>
+              <table className="admin-table">
+                <tbody>
+                  {paymentSettings.length === 0 && <tr><td className="empty">Inga betalinställningar hittades i databasen</td></tr>}
+                  {paymentSettings.map(s => (
+                    <tr key={s.key}>
+                      <td style={{ width: '40%', fontWeight: 600 }}>{s.description || s.key}</td>
+                      <td>
+                        {editKey === s.key ? (
+                          <div style={{ display: 'flex', gap: '0.5rem' }}><Input type="password" value={editValue} onChange={e => setEditValue(e.target.value)} style={{ marginBottom: 0 }} autoFocus /><Button size="sm" onClick={saveEdit} loading={saving}>Ok</Button><Button size="sm" variant="secondary" onClick={cancelEdit}>X</Button></div>
+                        ) : (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><code>{s.value?.substring(0, 8)}********</code><button className="btn btn-sm btn-ghost" onClick={() => startEdit(s.key, s.value)}>✎</button></div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ marginTop: '2rem', padding: '1rem', background: 'var(--blue-50)', borderRadius: '8px', border: '1px solid var(--blue-100)' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--blue-700)', margin: 0 }}>
+                  <strong>Tips:</strong> Se till att din Stripe Webhook URL är inställd på <code>https://api.dykgaraget.se/api/payments/webhook</code> för att hantera bekräftelser korrekt i produktion.
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* 🛡️ TAB: System */}
+          {activeTab === 'system' && (
+            <div className="grid grid-2">
+              <Card>
+                <h2>Systemhälsa</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Backend Server</span>
+                    <Badge variant={health.backend === 'online' ? 'success' : 'danger'}>{health.backend.toUpperCase()}</Badge>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Database Connection</span>
+                    <Badge variant={health.api === 'healthy' ? 'success' : 'warning'}>{health.api.toUpperCase()}</Badge>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={checkHealth} style={{ marginTop: '1rem' }}>Uppdatera hälsa</Button>
+                </div>
+              </Card>
+              <Card>
+                <h2>Versionsinfo</h2>
+                <div style={{ marginTop: '1rem', fontSize: '0.9rem' }}>
+                  <p><strong>Version:</strong> 1.3.0-rc1</p>
+                  <p><strong>Miljö:</strong> {process.env.NODE_ENV}</p>
+                  <p><strong>Senaste Deploy:</strong> {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+                  <hr style={{ opacity: 0.1, margin: '1rem 0' }} />
+                  <p style={{ color: 'var(--gray-500)', fontSize: '0.8rem' }}>Automatiskt update-system aktivt via <code>update.sh</code>.</p>
+                </div>
+              </Card>
+            </div>
+          )}
+        </>
       )}
     </AdminLayout>
   )

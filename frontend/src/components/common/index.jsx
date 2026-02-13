@@ -128,7 +128,6 @@ export function AdminLayout({ title, children }) {
     ] : []),
     ...(features.invoicing ? [{ to: '/admin/fakturor', icon: '🧾', label: 'Fakturor' }] : []),
     { to: '/admin/installningar', icon: '⚙️', label: 'Inställningar', separator: true },
-    { to: '/admin/innehall', icon: '✍️', label: 'Hantera innehåll' },
     { to: '/admin/kunder', icon: '👥', label: 'Kunder' },
     { to: '/admin/anvandare', icon: '👥', label: 'Användare' },
   ]

@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   return (
     <AdminLayout title="Dashboard">
-      <div className="grid grid-4">
+      <div className="grid grid-3">
         {tiles.map((tile) => (
           <Link key={tile.label} to={tile.link} className="stat-tile">
             <span className="stat-tile-icon">{tile.icon}</span>
@@ -37,20 +37,6 @@ export default function Dashboard() {
             {tile.sub && <span className="stat-tile-sub">{tile.sub}</span>}
           </Link>
         ))}
-        <div className="stat-tile" style={{ cursor: 'default' }}>
-          <span className="stat-tile-icon">🛡️</span>
-          <div style={{ marginTop: '0.4rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.2rem' }}>
-              <span>Backend</span>
-              <Badge variant={health.backend === 'online' ? 'success' : 'danger'}>{health.backend}</Badge>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-              <span>API</span>
-              <Badge variant={health.api === 'healthy' ? 'success' : 'warning'}>{health.api}</Badge>
-            </div>
-          </div>
-          <span className="stat-tile-label" style={{ marginTop: '0.5rem' }}>Systemhälsa</span>
-        </div>
       </div>
 
       <div className="grid grid-2" style={{ marginTop: '2rem' }}>
