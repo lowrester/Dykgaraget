@@ -27,7 +27,7 @@ export default function Login() {
 
                 <form onSubmit={handleSubmit}>
                     <Input label="Användarnamn" value={username} onChange={(e) => setUsername(e.target.value)} required autoFocus />
-                    <Input label="Lösenord" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="••••••••" />
+                    <Input label="Lösenord" type="text" value={password} onChange={(e) => setPassword(e.target.value)} required />
                     <Button type="submit" loading={loading} className="btn-full" style={{ marginTop: '1.5rem' }}>
                         Logga in
                     </Button>

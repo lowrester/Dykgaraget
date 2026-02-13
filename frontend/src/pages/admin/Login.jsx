@@ -37,11 +37,10 @@ export default function AdminLogin() {
           />
           <Input
             label="Lösenord"
-            type="password"
+            type="text"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            placeholder="••••••••"
           />
           <Button type="submit" loading={loading} className="btn-full" style={{ marginTop: '1.25rem' }}>
             Logga in
