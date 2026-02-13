@@ -18,16 +18,16 @@ router.get('/', authenticateAdmin, async (req, res) => {
 // POST /api/users
 router.post('/', authenticateAdmin, async (req, res) => {
     try {
-        const { username, email, password, first_name, last_name, role = 'customer' } = req.body
+        const { username, email, password, first_name, last_name, role = 'customer', phone, address, postal_code, city } = req.body
         if (!username || !email || !password) {
             return res.status(400).json({ error: 'Användarnamn, e-post och lösenord krävs' })
         }
 
         const hash = await bcrypt.hash(password, 10)
         const result = await pool.query(
-            `INSERT INTO users (username, email, password_hash, first_name, last_name, role)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, username, email, role`,
-            [username, email, hash, first_name, last_name, role]
+            `INSERT INTO users (username, email, password_hash, first_name, last_name, role, phone, address, postal_code, city)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, username, email, role`,
+            [username, email, hash, first_name, last_name, role, phone, address, postal_code, city]
         )
         res.status(201).json(result.rows[0])
     } catch (err) {
@@ -39,15 +39,14 @@ router.post('/', authenticateAdmin, async (req, res) => {
 // PUT /api/users/:id
 router.put('/:id', authenticateAdmin, async (req, res) => {
     try {
-        const { username, email, password, first_name, last_name, role, is_active } = req.body
-        const fields = []
-        const values = []
-        let i = 1
-
         if (username) { fields.push(`username = $${i++}`); values.push(username) }
         if (email) { fields.push(`email = $${i++}`); values.push(email) }
-        if (first_name) { fields.push(`first_name = $${i++}`); values.push(first_name) }
-        if (last_name) { fields.push(`last_name = $${i++}`); values.push(last_name) }
+        if (first_name !== undefined) { fields.push(`first_name = $${i++}`); values.push(first_name) }
+        if (last_name !== undefined) { fields.push(`last_name = $${i++}`); values.push(last_name) }
+        if (phone !== undefined) { fields.push(`phone = $${i++}`); values.push(phone) }
+        if (address !== undefined) { fields.push(`address = $${i++}`); values.push(address) }
+        if (postal_code !== undefined) { fields.push(`postal_code = $${i++}`); values.push(postal_code) }
+        if (city !== undefined) { fields.push(`city = $${i++}`); values.push(city) }
         if (role) { fields.push(`role = $${i++}`); values.push(role) }
         if (is_active !== undefined) { fields.push(`is_active = $${i++}`); values.push(is_active) }
 
