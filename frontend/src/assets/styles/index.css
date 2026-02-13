@@ -608,24 +608,7 @@ button {
 }
 
 .hero-logo {
-  width: 220px;
-  height: 220px;
-  object-fit: contain;
-  margin-bottom: 2.5rem;
-  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.12));
-  transition: transform 0.3s ease;
-}
-
-.hero-logo:hover {
-  transform: scale(1.02);
-}
-
-@media (max-width: 768px) {
-  .hero-logo {
-    width: 140px;
-    height: 140px;
-    margin-bottom: 2rem;
-  }
+  display: none !important;
 }
 
 .hero-eyebrow {

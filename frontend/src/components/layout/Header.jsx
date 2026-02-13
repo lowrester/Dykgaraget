@@ -10,11 +10,31 @@ export default function Header() {
   const [open, setOpen] = useState(false)
 
   const handleLogout = () => { logout(); navigate('/') }
-
   const toggleOpen = (val) => {
     setOpen(val)
     if (val) document.body.classList.add('menu-open')
     else document.body.classList.remove('menu-open')
+  }
+
+  const AuthActions = ({ mobile = false }) => {
+    if (user) {
+      return (
+        <>
+          {user.role === 'admin' ? (
+            <Link to="/admin" className={`btn btn-secondary ${mobile ? '' : 'btn-sm'}`} onClick={() => toggleOpen(false)}>Admin</Link>
+          ) : (
+            <Link to="/konto" className={`btn btn-secondary ${mobile ? '' : 'btn-sm'}`} onClick={() => toggleOpen(false)}>Mina sidor</Link>
+          )}
+          <button onClick={handleLogout} className={`btn btn-ghost ${mobile ? '' : 'btn-sm'}`}>Logga ut</button>
+        </>
+      )
+    }
+    return (
+      <>
+        <Link to="/loggain" className={`btn btn-ghost ${mobile ? '' : 'btn-sm'}`} onClick={() => toggleOpen(false)}>Logga in</Link>
+        <Link to="/bokning" className={`btn btn-primary ${mobile ? '' : 'btn-sm'}`} onClick={() => toggleOpen(false)}>Boka kurs</Link>
+      </>
+    )
   }
 
   return (
@@ -45,35 +65,14 @@ export default function Header() {
 
           {/* Mobile only actions at the bottom of the drawer */}
           <div className="mobile-only-actions">
-            {user ? (
-              <button onClick={() => { handleLogout(); toggleOpen(false) }} className="btn btn-ghost">Logga ut</button>
-            ) : (
-              <>
-                <Link to="/loggain" className="btn btn-secondary" onClick={() => toggleOpen(false)}>Logga in</Link>
-                <Link to="/bokning" className="btn btn-primary" onClick={() => toggleOpen(false)}>Boka nu</Link>
-              </>
-            )}
+            <AuthActions mobile />
           </div>
         </nav>
 
         {/* Actions */}
         <div className="header-actions">
           <div className="desktop-only-actions">
-            {user ? (
-              <>
-                {user.role === 'admin' ? (
-                  <Link to="/admin" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Admin</Link>
-                ) : (
-                  <Link to="/konto" className="btn btn-secondary btn-sm" onClick={() => toggleOpen(false)}>Mina sidor</Link>
-                )}
-                <button onClick={handleLogout} className="btn btn-ghost btn-sm">Logga ut</button>
-              </>
-            ) : (
-              <>
-                <Link to="/loggain" className="btn btn-ghost btn-sm" style={{ marginRight: '0.5rem' }}>Logga in</Link>
-                <Link to="/bokning" className="btn btn-primary btn-sm">Boka nu</Link>
-              </>
-            )}
+            <AuthActions />
           </div>
 
           {/* Hamburger */}

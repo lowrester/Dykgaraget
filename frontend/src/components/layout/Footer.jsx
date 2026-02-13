@@ -10,10 +10,6 @@ export default function Footer() {
 
           {/* Brand */}
           <div className="footer-brand">
-            <div className="footer-logo">
-              <img src="/logo.png" alt="Dykgaraget" className="footer-logo-img" />
-              <span className="footer-logo-name">Dykgaraget</span>
-            </div>
             <p className="footer-desc">
               PADI-certifierad dykskola driven av passion för havet.
               Kurser för alla nivåer — från nybörjare till divemaster.
