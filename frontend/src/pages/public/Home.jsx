@@ -24,7 +24,6 @@ export default function Home() {
       <section className="hero">
         <div className="container">
           <div className="hero-content">
-            <img src="/logo.png" alt="Dykgaraget Logo" className="hero-logo" />
             <div className="hero-eyebrow">{t('home_hero_eyebrow', '🤿 PADI-certifierad dykskola')}</div>
             <h1 className="hero-title">
               {t('home_hero_title', 'Din guide till dykning i Sverige')}
@@ -32,10 +31,6 @@ export default function Home() {
             <p className="hero-subtitle">
               {t('home_hero_subtitle', 'Professionell dykutbildning med PADI-certifierade instruktörer. Oavsett nivå — från första dyket till divemaster.')}
             </p>
-            <div className="hero-actions">
-              <Link to="/bokning" className="btn btn-primary btn-lg">Boka kurs</Link>
-              <Link to="/certifieringar" className="btn btn-secondary btn-lg">Se certifieringar →</Link>
-            </div>
           </div>
         </div>
       </section>
@@ -119,10 +114,6 @@ export default function Home() {
             <div className="cta-inner">
               <h2>{t('home_cta_title', 'Redo att börja dyka?')}</h2>
               <p>{t('home_cta_subtitle', 'Boka din kurs idag och ta första steget ut i det blå.')}</p>
-              <div style={{ display: 'flex', gap: '0.6rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                <Link to="/bokning" className="btn btn-primary btn-lg">Boka nu</Link>
-                <Link to="/certifieringar" className="btn btn-outline btn-lg">Se kurser</Link>
-              </div>
             </div>
           </div>
         </div>

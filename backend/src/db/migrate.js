@@ -234,6 +234,20 @@ async function run() {
       WHERE sessions = '[]' OR sessions IS NULL;
     `)
 
+    await runMigration('007_audit_logs', `
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id          SERIAL PRIMARY KEY,
+        user_id     INT REFERENCES users(id) ON DELETE SET NULL,
+        action      VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(50),
+        entity_id   INT,
+        metadata    JSONB DEFAULT '{}',
+        ip_address  VARCHAR(45),
+        user_agent  TEXT,
+        created_at  TIMESTAMP DEFAULT NOW()
+      );
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

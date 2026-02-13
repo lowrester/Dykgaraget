@@ -20,26 +20,45 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Kurser */}
+          {/* Utbildning */}
           <div>
             <h4>Utbildning</h4>
             <ul className="footer-links">
               <li><Link to="/certifieringar">Alla certifieringar</Link></li>
-              <li><Link to="/certifieringar">Open Water Diver</Link></li>
+              <li><Link to="/certifieringar">PADI Open Water Diver</Link></li>
               <li><Link to="/certifieringar">Advanced Open Water</Link></li>
               <li><Link to="/certifieringar">Rescue Diver</Link></li>
               <li><Link to="/certifieringar">Divemaster</Link></li>
             </ul>
           </div>
 
-          {/* Info */}
+          {/* Säkerhet & Regelefterlevnad */}
           <div>
-            <h4>Info</h4>
+            <h4>Säkerhet & Compliance</h4>
+            <ul className="footer-links compliance-list">
+              <li>
+                <span className="compliance-badge">ISO 27001</span>
+                <span className="compliance-text">Information Security</span>
+              </li>
+              <li>
+                <span className="compliance-badge">GDPR</span>
+                <span className="compliance-text">Data Protection</span>
+              </li>
+              <li>
+                <span className="compliance-badge">SOC 2 TYPE II</span>
+                <span className="compliance-text">Trust Services</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Quick links för kontakt/bokning */}
+          <div>
+            <h4>Snabblänkar</h4>
             <ul className="footer-links">
-              <li><Link to="/instruktorer">Instruktörer</Link></li>
-              {features.equipment && <li><Link to="/utrustning">Utrustning</Link></li>}
-              <li><Link to="/kontakt">Kontakt</Link></li>
-              <li><Link to="/bokning">Boka kurs</Link></li>
+              <li><Link to="/bokning" style={{ fontWeight: 600, color: 'var(--white)' }}>Boka nu</Link></li>
+              <li><Link to="/integritetspolicy">Integritetspolicy (GDPR)</Link></li>
+              <li><Link to="/kontakt">Support & Kontakt</Link></li>
+              <li><Link to="/loggain">Mina sidor</Link></li>
             </ul>
           </div>
 

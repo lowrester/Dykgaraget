@@ -374,6 +374,10 @@ button {
   gap: 0.5rem;
 }
 
+.mobile-only-actions {
+  display: none !important;
+}
+
 .nav-toggle {
   display: none;
   flex-direction: column;
@@ -463,7 +467,16 @@ button {
   }
 
   .desktop-only-actions {
-    display: none;
+    display: none !important;
+  }
+
+  .mobile-only-actions {
+    margin-top: auto;
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray-100);
   }
 
   body.menu-open {
@@ -595,18 +608,23 @@ button {
 }
 
 .hero-logo {
-  width: 160px;
-  height: 160px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
-  margin-bottom: 2rem;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+  margin-bottom: 2.5rem;
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.12));
+  transition: transform 0.3s ease;
+}
+
+.hero-logo:hover {
+  transform: scale(1.02);
 }
 
 @media (max-width: 768px) {
   .hero-logo {
-    width: 120px;
-    height: 120px;
-    margin-bottom: 1.5rem;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 2rem;
   }
 }
 
@@ -2340,5 +2358,103 @@ code {
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* ── Invoicing UX Improvements ────────────────────────────── */
+.admin-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.stats-group {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+}
+
+.invoice-items-section {
+  background: var(--gray-50);
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+}
+
+.invoice-item-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) 80px 120px 200px 40px;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+@media (max-width: 768px) {
+  .admin-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+
+  .invoice-item-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .invoice-item-row>div:first-child {
+    grid-column: span 2;
+  }
+}
+
+.invoice-total-summary {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Footer Compliance Styles ────────────────────────────── */
+.compliance-list {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0.75rem !important;
+}
+
+.compliance-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.compliance-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--gray-800);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  width: fit-content;
+  letter-spacing: 0.05em;
+  border: 1px solid var(--gray-700);
+}
+
+.compliance-text {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
+.footer-inner {
+  grid-template-columns: 2fr 1fr 1fr 1fr !important;
+}
+
+@media (max-width: 992px) {
+  .footer-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer-inner {
+    grid-template-columns: 1fr;
   }
 }

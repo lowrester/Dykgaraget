@@ -50,7 +50,7 @@ export default function Header() {
             ) : (
               <>
                 <Link to="/loggain" className="btn btn-secondary" onClick={() => toggleOpen(false)}>Logga in</Link>
-                <Link to="/bokning" className="btn btn-primary" onClick={() => toggleOpen(false)}>Boka kurs</Link>
+                <Link to="/bokning" className="btn btn-primary" onClick={() => toggleOpen(false)}>Boka nu</Link>
               </>
             )}
           </div>

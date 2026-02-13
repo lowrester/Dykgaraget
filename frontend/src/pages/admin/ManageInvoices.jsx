@@ -121,20 +121,26 @@ export default function ManageInvoices() {
     }
   }
 
+  // Calculate manual total
+  const manualTotal = manualInvoice.items.reduce((sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)), 0)
+
   return (
     <AdminLayout title="Fakturering">
-
-      <div className="grid grid-3" style={{ marginBottom: '2rem' }}>
-        <div className="stat-tile no-link">
-          <span className="stat-tile-label">Total intäkt (betalt)</span>
-          <span className="stat-tile-value" style={{ color: 'var(--success)' }}>{totalRevenue.toLocaleString('sv-SE')} kr</span>
+      <div className="admin-header-actions" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div className="stats-group" style={{ display: 'flex', gap: '1rem', flex: 1 }}>
+          <div className="stat-tile no-link" style={{ flex: 1, borderLeft: '4px solid var(--success)' }}>
+            <span className="stat-tile-label">Betalda fakturor</span>
+            <span className="stat-tile-value">{totalRevenue.toLocaleString('sv-SE')} kr</span>
+          </div>
+          <div className="stat-tile no-link" style={{ flex: 1, borderLeft: '4px solid var(--warning)' }}>
+            <span className="stat-tile-label">Väntande betalningar</span>
+            <span className="stat-tile-value">{unpaidTotal.toLocaleString('sv-SE')} kr</span>
+          </div>
         </div>
-        <div className="stat-tile no-link">
-          <span className="stat-tile-label">Väntande betalningar</span>
-          <span className="stat-tile-value" style={{ color: 'var(--warning)' }}>{unpaidTotal.toLocaleString('sv-SE')} kr</span>
-        </div>
-        <div className="stat-tile no-link" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem' }}>
-          <Button onClick={() => setShowManualModal(true)} className="btn-full">+ Ny manuell faktura</Button>
+        <div style={{ marginLeft: '2rem' }}>
+          <Button onClick={() => setShowManualModal(true)} variant="primary">
+            <span style={{ marginRight: '0.5rem' }}>+</span> Skapa manuell faktura
+          </Button>
         </div>
       </div>
 
@@ -212,67 +218,101 @@ export default function ManageInvoices() {
 
       {showManualModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '700px' }}>
-            <h2>Skapa manuell faktura</h2>
+          <div className="modal-content" style={{ maxWidth: '800px' }}>
+            <div className="modal-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--gray-200)', paddingBottom: '1rem' }}>
+              <h2 style={{ margin: 0 }}>Skapa manuell faktura</h2>
+            </div>
+
             <form onSubmit={handleManualSubmit}>
-              <div className="grid grid-2">
+              <div className="grid grid-2" style={{ marginBottom: '1.5rem' }}>
                 <div className="form-group">
                   <label>Kundens namn</label>
-                  <input type="text" value={manualInvoice.buyer_name} onChange={e => setManualInvoice({ ...manualInvoice, buyer_name: e.target.value })} required />
+                  <input type="text" placeholder="T.ex. Johan Dykarsson" value={manualInvoice.buyer_name} onChange={e => setManualInvoice({ ...manualInvoice, buyer_name: e.target.value })} required />
                 </div>
                 <div className="form-group">
                   <label>Kundens e-post</label>
-                  <input type="email" value={manualInvoice.buyer_email} onChange={e => setManualInvoice({ ...manualInvoice, buyer_email: e.target.value })} required />
+                  <input type="email" placeholder="namn@exempel.se" value={manualInvoice.buyer_email} onChange={e => setManualInvoice({ ...manualInvoice, buyer_email: e.target.value })} required />
                 </div>
               </div>
-              <div className="form-group">
+
+              <div className="form-group" style={{ marginBottom: '2rem' }}>
                 <label>Fakturaadress</label>
-                <textarea rows="2" value={manualInvoice.buyer_address} onChange={e => setManualInvoice({ ...manualInvoice, buyer_address: e.target.value })} />
+                <textarea rows="2" placeholder="Gatuadress, postnummer och ort" value={manualInvoice.buyer_address} onChange={e => setManualInvoice({ ...manualInvoice, buyer_address: e.target.value })} />
               </div>
 
-              <div style={{ marginTop: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ fontWeight: 'bold' }}>Fakturarader</label>
+              <div className="invoice-items-section" style={{ background: 'var(--gray-50)', padding: '1.25rem', borderRadius: 'var(--radius)', border: '1px solid var(--gray-200)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--gray-700)' }}>Fakturarader</h4>
                   <Button type="button" variant="secondary" size="sm" onClick={addLineItem}>+ Lägg till rad</Button>
                 </div>
-                {manualInvoice.items.map((item, idx) => (
-                  <div key={idx} className="grid" style={{ gridTemplateColumns: '1fr 80px 120px 200px', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'end' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.7rem' }}>Beskrivning</label>
-                      <input type="text" value={item.description} onChange={e => updateLineItem(idx, 'description', e.target.value)} required />
+
+                <div className="invoice-items-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {manualInvoice.items.map((item, idx) => (
+                    <div key={idx} className="invoice-item-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(200px, 2fr) 80px 120px 200px 40px', gap: '0.75rem', alignItems: 'end' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--gray-500)' }}>Beskrivning</label>
+                        <input type="text" value={item.description} onChange={e => updateLineItem(idx, 'description', e.target.value)} required />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--gray-500)' }}>Antal</label>
+                        <input type="number" min="1" step="0.1" value={item.quantity} onChange={e => updateLineItem(idx, 'quantity', e.target.value)} required />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--gray-500)' }}>À-pris (kr)</label>
+                        <input type="number" min="0" value={item.unit_price} onChange={e => updateLineItem(idx, 'unit_price', e.target.value)} required />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label style={{ fontSize: '0.7rem', color: 'var(--gray-500)' }}>Referens</label>
+                        <select onChange={e => {
+                          const [type, id] = e.target.value.split(':')
+                          if (id) prefillItem(idx, type, id)
+                        }} defaultValue="">
+                          <option value="">-- Välj från register --</option>
+                          <optgroup label="Kurser">
+                            {courses.map(c => <option key={`c:${c.id}`} value={`course:${c.id}`}>{c.name}</option>)}
+                          </optgroup>
+                          <optgroup label="Utrustning">
+                            {equipment.map(e => <option key={`e:${e.id}`} value={`equip:${e.id}`}>{e.name} ({e.size})</option>)}
+                          </optgroup>
+                        </select>
+                      </div>
+                      <div style={{ paddingBottom: '2px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newItems = manualInvoice.items.filter((_, i) => i !== idx)
+                            setManualInvoice(m => ({ ...m, items: newItems.length ? newItems : [{ description: '', quantity: 1, unit_price: 0 }] }))
+                          }}
+                          style={{ color: 'var(--red)', fontSize: '1.2rem', opacity: 0.6 }}
+                          title="Ta bort rad"
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.7rem' }}>Antal</label>
-                      <input type="number" value={item.quantity} onChange={e => updateLineItem(idx, 'quantity', e.target.value)} required />
+                  ))}
+                </div>
+
+                <div className="invoice-total-summary" style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--gray-300)', display: 'flex', justifyContent: 'flex-end' }}>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)', marginBottom: '0.2rem' }}>Totalsumma att fakturera:</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--gray-900)' }}>
+                      {manualTotal.toLocaleString('sv-SE')} kr
                     </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.7rem' }}>À-pris</label>
-                      <input type="number" value={item.unit_price} onChange={e => updateLineItem(idx, 'unit_price', e.target.value)} required />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label style={{ fontSize: '0.7rem' }}>Hämta från register</label>
-                      <select onChange={e => {
-                        const [type, id] = e.target.value.split(':')
-                        if (id) prefillItem(idx, type, id)
-                      }} defaultValue="">
-                        <option value="">-- Välj artikel --</option>
-                        <optgroup label="Kurser">
-                          {courses.map(c => <option key={`c:${c.id}`} value={`course:${c.id}`}>{c.name}</option>)}
-                        </optgroup>
-                        <optgroup label="Utrustning">
-                          {equipment.map(e => <option key={`e:${e.id}`} value={`equip:${e.id}`}>{e.name} ({e.size})</option>)}
-                        </optgroup>
-                      </select>
-                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--gray-400)' }}>inkl. 25% moms: {(manualTotal * 0.25).toLocaleString('sv-SE')} kr</div>
                   </div>
-                ))}
+                </div>
               </div>
 
-              <div className="modal-actions" style={{ marginTop: '2rem' }}>
+              <div className="modal-actions" style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'space-between' }}>
                 <Button type="button" variant="secondary" onClick={() => setShowManualModal(false)}>Avbryt</Button>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Button type="button" variant="secondary" onClick={handlePreview}>👁 Förhandsgranska</Button>
-                  <Button type="submit" loading={working.manual === 'creating'}>Spara och skapa</Button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <Button type="button" variant="secondary" onClick={handlePreview}>
+                    <span style={{ marginRight: '0.4rem' }}>👁</span> Förhandsgranska PDF
+                  </Button>
+                  <Button type="submit" variant="primary" loading={working.manual === 'creating'}>
+                    Skapa och spara faktura
+                  </Button>
                 </div>
               </div>
             </form>

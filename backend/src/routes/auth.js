@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { pool } from '../db/connection.js'
 import { authenticate } from '../middleware/auth.js'
+import { logAction } from '../services/audit.js'
 
 const router = express.Router()
 
@@ -27,6 +28,8 @@ router.post('/register', async (req, res) => {
     )
 
     const user = result.rows[0]
+    await logAction(user.id, 'USER_REGISTER', 'users', user.id, { username: user.username }, req)
+
     const token = jwt.sign(
       { userId: user.id, role: 'customer' },
       process.env.JWT_SECRET,
@@ -57,10 +60,18 @@ router.post('/login', async (req, res) => {
     )
     const user = result.rows[0]
 
-    if (!user) return res.status(401).json({ error: 'Felaktiga inloggningsuppgifter' })
+    if (!user) {
+      await logAction(null, 'LOGIN_FAIL', 'users', null, { username }, req)
+      return res.status(401).json({ error: 'Felaktiga inloggningsuppgifter' })
+    }
 
     const valid = await bcrypt.compare(password, user.password_hash)
-    if (!valid) return res.status(401).json({ error: 'Felaktiga inloggningsuppgifter' })
+    if (!valid) {
+      await logAction(user.id, 'LOGIN_FAIL', 'users', user.id, { username }, req)
+      return res.status(401).json({ error: 'Felaktiga inloggningsuppgifter' })
+    }
+
+    await logAction(user.id, 'LOGIN_SUCCESS', 'users', user.id, { username }, req)
 
     const token = jwt.sign(
       { userId: user.id, role: user.role },
