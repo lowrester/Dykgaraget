@@ -37,7 +37,7 @@ export default function AdminLogin() {
           />
           <Input
             label="Lösenord"
-            type="text"
+            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
