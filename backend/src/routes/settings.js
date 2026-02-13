@@ -5,7 +5,30 @@ import { logAction } from '../services/audit.js'
 
 const router = express.Router()
 
-// ... (GET routes unchanged)
+// GET /api/settings
+router.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM settings ORDER BY category, key')
+    res.json(result.rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/settings/features
+router.get('/features', async (req, res) => {
+  try {
+    const result = await pool.query("SELECT key, value FROM settings WHERE key LIKE 'feature_%'")
+    const features = result.rows.reduce((acc, row) => {
+      const featureKey = row.key.replace('feature_', '')
+      acc[featureKey] = row.value === 'true'
+      return acc
+    }, {})
+    res.json(features)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
 
 // PUT /api/settings/:key  (admin)
 router.put('/:key', authenticateAdmin, async (req, res) => {

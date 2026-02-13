@@ -23,15 +23,23 @@ export async function processOrder(orderData, client = pool) {
     const {
         items, first_name, last_name, email, phone,
         customer_id, payment_method, address, zip, city,
-        create_account
+        create_account: requestedCreateAccount
     } = orderData
 
     let userId = customer_id
     let generatedPassword = null
+    let create_account = requestedCreateAccount
 
     await client.query('BEGIN')
 
     try {
+        // Fetch registration mode
+        const regModeRes = await client.query("SELECT value FROM settings WHERE key = 'checkout_registration_mode'")
+        const regMode = regModeRes.rows[0]?.value || 'optional'
+
+        if (regMode === 'mandatory') create_account = true
+        if (regMode === 'disabled') create_account = false
+
         // 0. Handle Auto-Registration
         if (create_account && !userId) {
             // Check if user already exists

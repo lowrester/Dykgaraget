@@ -316,6 +316,12 @@ async function run() {
       UPDATE courses SET vat_rate = 0.06 WHERE vat_rate IS NULL;
     `)
 
+    await runMigration('012_checkout_registration_mode', `
+      INSERT INTO settings (key, value, category, description)
+      VALUES ('checkout_registration_mode', 'optional', 'features', 'Registreringsläge i kassan (disabled, optional, mandatory)')
+      ON CONFLICT (key) DO NOTHING;
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

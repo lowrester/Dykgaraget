@@ -7,9 +7,11 @@ import client from '../../api/client.js'
 export default function Checkout() {
     const { user } = useAuthStore()
     const { items, getTotals, clearCart, removeItem, customerInfo } = useCartStore()
-    const { features } = useSettingsStore()
+    const { features, settings, fetchSettings } = useSettingsStore()
     const { addToast } = useUIStore()
     const navigate = useNavigate()
+
+    const regMode = settings.find(s => s.key === 'checkout_registration_mode')?.value || 'optional'
 
     const [form, setForm] = useState({
         first_name: customerInfo?.first_name || user?.firstName || '',
@@ -21,13 +23,17 @@ export default function Checkout() {
         city: '',
         payment_method: 'invoice', // invoice or stripe
         gdprConsent: customerInfo?.gdprConsent || !!user,
-        create_account: false
+        create_account: regMode === 'mandatory'
     })
     const [errors, setErrors] = useState({})
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(null)
 
     const totals = getTotals()
+
+    useEffect(() => {
+        if (settings.length === 0) fetchSettings()
+    }, [settings, fetchSettings])
 
     useEffect(() => {
         if (items.length === 0 && !success) {
@@ -48,6 +54,12 @@ export default function Checkout() {
             }))
         }
     }, [customerInfo])
+
+    // Update create_account if regMode changes (should be rare during checkout but for safety)
+    useEffect(() => {
+        if (regMode === 'mandatory') set('create_account', true)
+        if (regMode === 'disabled') set('create_account', false)
+    }, [regMode])
 
     const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
 
@@ -71,6 +83,7 @@ export default function Checkout() {
             // Create order/bookings
             const orderData = {
                 ...form,
+                create_account: regMode === 'mandatory' ? true : (regMode === 'disabled' ? false : form.create_account),
                 items,
                 customer_id: user?.id || null,
                 total_amount: totals.total
@@ -234,11 +247,18 @@ export default function Checkout() {
                         </div>
 
                         <div style={{ marginTop: '2rem', display: 'grid', gap: '1rem' }}>
-                            {!user && (
+                            {!user && regMode === 'optional' && (
                                 <label className="checkbox-container" style={{ display: 'flex', gap: '0.75rem', fontSize: '0.9rem', cursor: 'pointer', padding: '0.5rem', background: 'var(--blue-50)', borderRadius: '4px', border: '1px dashed var(--blue-200)' }}>
                                     <input type="checkbox" checked={form.create_account} onChange={e => set('create_account', e.target.checked)} />
                                     <span><strong>Spara mina uppgifter och skapa ett konto</strong><br /><small style={{ color: 'var(--gray-600)' }}>Vi mailar ut ett lösenord till dig efter genomfört köp.</small></span>
                                 </label>
+                            )}
+
+                            {!user && regMode === 'mandatory' && (
+                                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.9rem', padding: '0.75rem', background: 'var(--blue-50)', borderRadius: '4px', border: '1px solid var(--blue-100)' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>👤</span>
+                                    <span><strong>Ett konto kommer att skapas åt dig</strong><br /><small style={{ color: 'var(--gray-600)' }}>Vi mailar ut dina inloggningsuppgifter så snart köpet är klart.</small></span>
+                                </div>
                             )}
 
                             <label className="checkbox-container" style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', cursor: 'pointer' }}>

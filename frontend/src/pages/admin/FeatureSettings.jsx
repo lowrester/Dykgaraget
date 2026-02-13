@@ -158,6 +158,22 @@ export default function FeatureSettings() {
                 })}
               </div>
               {toggling && <div style={{ marginTop: '1rem' }}><Spinner text="Uppdaterar..." /></div>}
+              <h2 style={{ marginBottom: '1.5rem', marginTop: '3rem' }}>Inloggning & Registrering</h2>
+              <div style={{ maxWidth: '400px' }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--gray-600)', marginBottom: '1rem' }}>
+                  Bestäm hur kontoskapande ska fungera för nya kunder vid köp i kassan.
+                </p>
+                <Select
+                  label="Registreringsläge i kassan"
+                  value={settings.find(s => s.key === 'checkout_registration_mode')?.value || 'optional'}
+                  onChange={(e) => updateSetting('checkout_registration_mode', e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="disabled">Avstängt (Ingen registrering möjlig)</option>
+                  <option value="optional">Valfritt (Bockas i av kunden)</option>
+                  <option value="mandatory">Tvingande (Konto skapas alltid)</option>
+                </Select>
+              </div>
             </Card>
           )}
 
