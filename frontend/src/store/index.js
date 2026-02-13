@@ -449,15 +449,25 @@ const LOAD_CART = () => {
   try { return JSON.parse(sessionStorage.getItem('cart')) || [] }
   catch { return [] }
 }
+const LOAD_CUST = () => {
+  try { return JSON.parse(sessionStorage.getItem('customerInfo')) || null }
+  catch { return null }
+}
 
 export const useCartStore = create((set, get) => ({
   items: LOAD_CART(),
+  customerInfo: LOAD_CUST(),
 
   addItem: (item) => {
     // Check if duplicate course? Usually one course per booking.
     const items = [...get().items, { ...item, cartId: Date.now() + Math.random() }]
     set({ items })
     sessionStorage.setItem('cart', JSON.stringify(items))
+  },
+
+  setCustomerInfo: (info) => {
+    set({ customerInfo: info })
+    sessionStorage.setItem('customerInfo', JSON.stringify(info))
   },
 
   removeItem: (cartId) => {
@@ -467,8 +477,9 @@ export const useCartStore = create((set, get) => ({
   },
 
   clearCart: () => {
-    set({ items: [] })
+    set({ items: [], customerInfo: null })
     sessionStorage.removeItem('cart')
+    sessionStorage.removeItem('customerInfo')
   },
 
   getTotals: () => {

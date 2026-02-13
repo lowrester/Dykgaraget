@@ -6,21 +6,21 @@ import client from '../../api/client.js'
 
 export default function Checkout() {
     const { user } = useAuthStore()
-    const { items, getTotals, clearCart, removeItem } = useCartStore()
+    const { items, getTotals, clearCart, removeItem, customerInfo } = useCartStore()
     const { features } = useSettingsStore()
     const { addToast } = useUIStore()
     const navigate = useNavigate()
 
     const [form, setForm] = useState({
-        first_name: user?.firstName || '',
-        last_name: user?.lastName || '',
-        email: user?.email || '',
-        phone: '',
+        first_name: customerInfo?.first_name || user?.firstName || '',
+        last_name: customerInfo?.last_name || user?.lastName || '',
+        email: customerInfo?.email || user?.email || '',
+        phone: customerInfo?.phone || '',
         address: '',
         zip: '',
         city: '',
         payment_method: 'invoice', // invoice or stripe
-        gdprConsent: !!user
+        gdprConsent: customerInfo?.gdprConsent || !!user
     })
     const [errors, setErrors] = useState({})
     const [loading, setLoading] = useState(false)
@@ -33,6 +33,20 @@ export default function Checkout() {
             navigate('/certifieringar')
         }
     }, [items, navigate, success])
+
+    // Update form if customerInfo changes (e.g. on mount or if user was null then populated)
+    useEffect(() => {
+        if (customerInfo) {
+            setForm(f => ({
+                ...f,
+                first_name: f.first_name || customerInfo.first_name,
+                last_name: f.last_name || customerInfo.last_name,
+                email: f.email || customerInfo.email,
+                phone: f.phone || customerInfo.phone,
+                gdprConsent: f.gdprConsent || customerInfo.gdprConsent
+            }))
+        }
+    }, [customerInfo])
 
     const set = (field, value) => setForm((f) => ({ ...f, [field]: value }))
 

@@ -77,12 +77,22 @@ export default function Booking() {
     }))
   }
 
-  const { addItem } = useCartStore()
+  const { addItem, setCustomerInfo } = useCartStore()
   const navigate = useNavigate()
+  const [wantsToRent, setWantsToRent] = useState(false)
 
   const handleSubmit = async () => {
     // Collect selected items
     const selectedCourse = courses.find((c) => c.id === parseInt(form.course_id))
+
+    // Persist customer info for checkout
+    setCustomerInfo({
+      first_name: form.first_name,
+      last_name: form.last_name,
+      email: form.email,
+      phone: form.phone,
+      gdprConsent: form.gdprConsent
+    })
 
     // Add Course to Cart
     addItem({
@@ -97,8 +107,7 @@ export default function Booking() {
       participants: form.participants
     })
 
-    // Add selected equipment as separate items or bundled? 
-    // The cart design seems to prefer separate items for clarity in summary.
+    // Add selected equipment as separate items
     form.equipment_ids.forEach(eqId => {
       const item = equipment.find(e => e.id === eqId)
       if (item) {
@@ -312,11 +321,25 @@ export default function Booking() {
             <h2>Utrustning</h2>
             {!features.equipment ? (
               <Alert type="info">Utrustningsuthyrning är inte tillgänglig för tillfället.</Alert>
+            ) : !wantsToRent ? (
+              <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                <h3 style={{ marginBottom: '1rem' }}>Behöver du hyra utrustning?</h3>
+                <p style={{ marginBottom: '2rem', color: 'var(--gray-600)' }}>
+                  Vi erbjuder allt från kompletta paket till enstaka artiklar.
+                </p>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <Button variant="secondary" onClick={next}>Nej, jag har egen</Button>
+                  <Button onClick={() => setWantsToRent(true)}>Ja, visa utrustning</Button>
+                </div>
+              </div>
             ) : equipment.length === 0 ? (
               <Spinner text="Hämtar utrustning..." />
             ) : (
               <>
-                <p className="step-desc">Välj utrustning att hyra. Pris visas per artikel och dag.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <p className="step-desc" style={{ margin: 0 }}>Välj utrustning att hyra. Pris visas per artikel och dag.</p>
+                  <button onClick={() => setWantsToRent(false)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.9rem' }}>← Ångra/Göm</button>
+                </div>
                 <div className="equipment-grid">
                   {equipment.map((item) => (
                     <div
