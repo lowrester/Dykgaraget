@@ -5,6 +5,7 @@ import path from 'path'
 import { pool } from '../db/connection.js'
 import { authenticate, authenticateAdmin, checkFeature } from '../middleware/auth.js'
 import { sendEmail } from '../services/email.js'
+import { createInvoiceFromBooking, getCompanySettings, nextSeq } from '../services/invoicing.js'
 
 const router = express.Router()
 router.use(checkFeature('invoicing'))
@@ -45,36 +46,8 @@ router.post('/', authenticateAdmin, async (req, res) => {
   try {
     const { booking_id } = req.body
     if (!booking_id) return res.status(400).json({ error: 'booking_id krävs' })
-
-    const bookingRes = await pool.query('SELECT * FROM bookings WHERE id = $1', [booking_id])
-    if (bookingRes.rows.length === 0) return res.status(404).json({ error: 'Bokning hittades inte' })
-    const booking = bookingRes.rows[0]
-
-    const prefixRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
-    const prefix = prefixRes.rows[0]?.value || 'DYK'
-    const termsRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_terms_days'")
-    const termsDays = parseInt(termsRes.rows[0]?.value || '30')
-    const vatRes = await pool.query("SELECT value FROM settings WHERE key = 'invoice_vat_rate'")
-    const vatRate = parseFloat(vatRes.rows[0]?.value || '0.25')
-
-    const subtotal = parseFloat(booking.total_price) / (1 + vatRate)
-    const vatAmount = parseFloat(booking.total_price) - subtotal
-    const totalAmount = parseFloat(booking.total_price)
-    const dueDate = new Date()
-    dueDate.setDate(dueDate.getDate() + termsDays)
-
-    const invoiceNumber = `${prefix}-${new Date().getFullYear()}-${String(await nextSeq(pool)).padStart(4, '0')}`
-
-    const result = await pool.query(
-      `INSERT INTO invoices
-         (booking_id, invoice_number, buyer_name, buyer_email,
-          subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid', $10) RETURNING *`,
-      [booking_id, invoiceNumber, `${booking.first_name} ${booking.last_name}`, booking.email,
-        subtotal.toFixed(2), vatRate, vatAmount.toFixed(2), totalAmount.toFixed(2),
-        dueDate.toISOString().split('T')[0], termsDays]
-    )
-    res.status(201).json(result.rows[0])
+    const invoice = await createInvoiceFromBooking(booking_id)
+    res.status(201).json(invoice)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -338,24 +311,9 @@ router.put('/:id/paid', authenticateAdmin, async (req, res) => {
   }
 })
 
-// ── Helpers ───────────────────────────────────────────────────
-
-async function nextSeq(poolOrClient) {
-  const r = await poolOrClient.query("SELECT nextval('invoice_number_seq')")
-  return r.rows[0].nextval
-}
-
 async function getInvoice(id) {
   const r = await pool.query('SELECT * FROM invoices WHERE id = $1', [id])
   return r.rows[0] || null
-}
-
-async function getCompanySettings() {
-  const r = await pool.query("SELECT key, value FROM settings WHERE category = 'company'")
-  return r.rows.reduce((acc, row) => {
-    acc[row.key.replace('company_', '')] = row.value
-    return acc
-  }, {})
 }
 
 async function generatePDFBody(doc, invoice, company) {

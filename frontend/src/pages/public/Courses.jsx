@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useCoursesStore, useSettingsStore } from '../../store/index.js'
+import { useCoursesStore, useSettingsStore, useCartStore, useUIStore } from '../../store/index.js'
 import { Card, LevelBadge, Spinner } from '../../components/common/index.jsx'
 
 export default function Courses() {
@@ -12,6 +12,22 @@ export default function Courses() {
     fetch()
     fetchSettings()
   }, [fetch, fetchSettings])
+
+  const { addItem } = useCartStore()
+  const { addToast } = useUIStore()
+
+  const handleAddToCart = (course) => {
+    addItem({
+      type: 'course',
+      courseId: course.id,
+      name: course.name,
+      price: course.price,
+      vat_rate: parseFloat(course.vat_rate || 0.06),
+      date: 'CONTACT', // Default to contact for date if added from list
+      participants: 1
+    })
+    addToast(`${course.name} tillagd i varukorgen`, 'success')
+  }
 
   const t = (key, fallback) => content[key] || fallback
 
@@ -39,9 +55,16 @@ export default function Courses() {
                 <span>⏱ {course.duration} dag{course.duration > 1 ? 'ar' : ''}</span>
                 <span>👥 Max {course.max_participants} deltagare</span>
               </div>
-              <div className="course-footer">
-                <span className="course-price">{parseFloat(course.price).toLocaleString('sv-SE')} kr</span>
-                <Link to="/bokning" className="btn btn-primary">Boka</Link>
+              <div className="course-footer" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span className="course-price" style={{ marginRight: 'auto' }}>{parseFloat(course.price).toLocaleString('sv-SE')} kr</span>
+                <Link to="/bokning" className="btn btn-secondary btn-sm">Boka</Link>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => handleAddToCart(course)}
+                  title="Lägg i varukorg"
+                >
+                  🛒 Köp
+                </button>
               </div>
             </Card>
           ))}

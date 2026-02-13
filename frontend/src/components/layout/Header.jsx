@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { useAuthStore, useSettingsStore } from '../../store/index.js'
+import { useNavigate, Link, NavLink } from 'react-router-dom'
+import { useAuthStore, useSettingsStore, useCartStore } from '../../store/index.js'
 
 export default function Header() {
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
   const features = useSettingsStore((s) => s.features)
+  const { items } = useCartStore()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
 
@@ -71,6 +72,19 @@ export default function Header() {
 
         {/* Actions */}
         <div className="header-actions">
+          <Link to="/kassa" className="cart-link" style={{ position: 'relative', display: 'flex', alignItems: 'center', marginRight: '0.5rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>🛒</span>
+            {items.length > 0 && (
+              <span className="cart-badge" style={{
+                position: 'absolute', top: '-5px', right: '-8px',
+                background: 'var(--red)', color: 'white', borderRadius: '50%',
+                padding: '2px 6px', fontSize: '0.7rem', fontWeight: 'bold'
+              }}>
+                {items.length}
+              </span>
+            )}
+          </Link>
+
           <div className="desktop-only-actions">
             <AuthActions />
           </div>

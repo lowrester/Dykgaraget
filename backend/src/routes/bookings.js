@@ -1,6 +1,7 @@
 import express from 'express'
 import { pool } from '../db/connection.js'
 import { authenticate, authenticateAdmin } from '../middleware/auth.js'
+import { createInvoiceFromBooking, getCompanySettings } from '../services/invoicing.js'
 
 const router = express.Router()
 
@@ -159,8 +160,17 @@ router.post('/', async (req, res) => {
       )
     }
 
+    // Auto-generate invoice if enabled
+    let invoice = null
+    const featureRes = await client.query("SELECT value FROM settings WHERE key = 'feature_invoicing'")
+    if (featureRes.rows[0]?.value === 'true') {
+      invoice = await createInvoiceFromBooking(booking.id, client)
+    }
+
+    const company = await getCompanySettings(client)
+
     await client.query('COMMIT')
-    res.status(201).json(booking)
+    res.status(201).json({ ...booking, invoice, company })
   } catch (err) {
     await client.query('ROLLBACK')
     res.status(500).json({ error: err.message })

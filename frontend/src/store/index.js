@@ -437,3 +437,57 @@ export const useInventoryStore = create((set, get) => ({
     return data
   }
 }))
+
+// ── Cart Store ────────────────────────────────────────────────
+const LOAD_CART = () => {
+  try { return JSON.parse(sessionStorage.getItem('cart')) || [] }
+  catch { return [] }
+}
+
+export const useCartStore = create((set, get) => ({
+  items: LOAD_CART(),
+
+  addItem: (item) => {
+    // Check if duplicate course? Usually one course per booking.
+    const items = [...get().items, { ...item, cartId: Date.now() + Math.random() }]
+    set({ items })
+    sessionStorage.setItem('cart', JSON.stringify(items))
+  },
+
+  removeItem: (cartId) => {
+    const items = get().items.filter(i => i.cartId !== cartId)
+    set({ items })
+    sessionStorage.setItem('cart', JSON.stringify(items))
+  },
+
+  clearCart: () => {
+    set({ items: [] })
+    sessionStorage.removeItem('cart')
+  },
+
+  getTotals: () => {
+    const items = get().items
+    let subtotal = 0
+    let vat25 = 0
+    let vat6 = 0
+
+    items.forEach(item => {
+      const price = parseFloat(item.price || 0)
+      const vatRate = parseFloat(item.vat_rate || 0.25)
+      const net = price / (1 + vatRate)
+      const vat = price - net
+
+      subtotal += net
+      if (vatRate === 0.25) vat25 += vat
+      else if (vatRate === 0.06) vat6 += vat
+      else vat25 += vat // default
+    })
+
+    return {
+      subtotal: subtotal.toFixed(2),
+      vat25: vat25.toFixed(2),
+      vat6: vat6.toFixed(2),
+      total: (parseFloat(subtotal) + parseFloat(vat25) + parseFloat(vat6)).toFixed(2)
+    }
+  }
+}))

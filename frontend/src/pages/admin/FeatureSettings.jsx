@@ -227,8 +227,21 @@ export default function FeatureSettings() {
           {/* 💳 TAB: Payment */}
           {activeTab === 'payment' && (
             <Card>
-              <h2 style={{ marginBottom: '0.5rem' }}>Betalnings-API (Stripe)</h2>
-              <p style={{ color: 'var(--gray-500)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Hantera nycklar och konfiguration för betalningsintegration.</p>
+              <h2 style={{ marginBottom: '0.5rem' }}>Betalningsmetoder och API</h2>
+              <p style={{ color: 'var(--gray-500)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
+                Systemet är konfigurerat för <strong>automatisk fakturering</strong> vid bokning.
+                Fakturor skapas med status "Obetald" och skickas/visas för kunden direkt.
+              </p>
+
+              <div style={{ padding: '1rem', background: 'var(--gray-50)', borderRadius: '8px', border: '1px solid var(--gray-200)', marginBottom: '2rem' }}>
+                <h4 style={{ marginBottom: '0.5rem' }}>Kortbetalning (Valfritt)</h4>
+                <p style={{ fontSize: '0.85rem', color: 'var(--gray-600)', margin: 0 }}>
+                  Vill du erbjuda direkt kortbetalning? Aktivera <em>Betalningsmodul</em> i fliken <strong>Moduler</strong> och fyll i dina Stripe-nycklar nedan.
+                  Vid kortbetalning markeras den automatiska fakturan som "Betald" direkt.
+                </p>
+              </div>
+
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Stripe API-inställningar</h3>
               <table className="admin-table">
                 <tbody>
                   {paymentSettings.length === 0 && <tr><td className="empty">Inga betalinställningar hittades i databasen</td></tr>}

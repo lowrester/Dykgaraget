@@ -311,6 +311,11 @@ async function run() {
       CREATE SEQUENCE IF NOT EXISTS po_number_seq START 1;
     `)
 
+    await runMigration('011_course_vat_rate', `
+      ALTER TABLE courses ADD COLUMN IF NOT EXISTS vat_rate NUMERIC(5,4) DEFAULT 0.06;
+      UPDATE courses SET vat_rate = 0.06 WHERE vat_rate IS NULL;
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

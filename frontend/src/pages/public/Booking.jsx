@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useCoursesStore, useEquipmentStore, useBookingsStore, useSettingsStore, useAuthStore } from '../../store/index.js'
+import { useNavigate, Link } from 'react-router-dom'
+import { useCoursesStore, useEquipmentStore, useBookingsStore, useSettingsStore, useAuthStore, useCartStore } from '../../store/index.js'
 import { Card, Button, Input, Spinner, Alert } from '../../components/common/index.jsx'
-import { Link } from 'react-router-dom'
 
-const STEPS = ['Välj kurs', 'Dina uppgifter', 'Utrustning', 'Bekräftelse']
+const STEPS = ['Välj kurs', 'Dina uppgifter', 'Utrustning', 'Bekräfta']
 
 export default function Booking() {
   const { user } = useAuthStore()
@@ -77,36 +77,51 @@ export default function Booking() {
     }))
   }
 
+  const { addItem } = useCartStore()
+  const navigate = useNavigate()
+
   const handleSubmit = async () => {
-    setLoading(true)
-    try {
-      const booking = await createBooking({
-        course_id: parseInt(form.course_id),
-        booking_date: form.booking_date,
-        booking_time: form.booking_time,
-        schedule_id: form.schedule_id ? parseInt(form.schedule_id) : null,
-        participants: parseInt(form.participants) || 1,
-        first_name: form.first_name,
-        last_name: form.last_name,
-        email: form.email,
-        phone: form.phone,
-        equipment_ids: form.equipment_ids,
-        notes: form.notes,
-        customer_id: user?.id || null
-      })
-      setSuccess(booking)
-      setStep(4)
-    } catch (err) {
-      setErrors({ submit: err.message })
-    } finally {
-      setLoading(false)
-    }
+    // Collect selected items
+    const selectedCourse = courses.find((c) => c.id === parseInt(form.course_id))
+
+    // Add Course to Cart
+    addItem({
+      type: 'course',
+      courseId: selectedCourse.id,
+      name: selectedCourse.name,
+      price: selectedCourse.price,
+      vat_rate: parseFloat(selectedCourse.vat_rate || 0.06),
+      date: form.booking_date,
+      time: form.booking_time,
+      scheduleId: form.schedule_id,
+      participants: form.participants
+    })
+
+    // Add selected equipment as separate items or bundled? 
+    // The cart design seems to prefer separate items for clarity in summary.
+    form.equipment_ids.forEach(eqId => {
+      const item = equipment.find(e => e.id === eqId)
+      if (item) {
+        addItem({
+          type: 'equipment',
+          equipmentId: item.id,
+          name: `Hyra: ${item.name}`,
+          size: item.size,
+          price: item.rental_price,
+          vat_rate: 0.25 // Standard VAT for rentals
+        })
+      }
+    })
+
+    navigate('/kassa')
   }
 
   const selectedCourse = courses.find((c) => c.id === parseInt(form.course_id))
   const selectedSchedule = schedules.find(s => s.id === parseInt(form.schedule_id))
 
   if (step === 4) {
+    const inv = success?.invoice
+    const company = success?.company
     return (
       <div className="page container">
         <div className="booking-success">
@@ -114,14 +129,33 @@ export default function Booking() {
           <h1>Bokning bekräftad!</h1>
           <p>Tack {success?.first_name}! Din bokning är registrerad.</p>
           <p>Bokningsnummer: <strong>#{success?.id}</strong></p>
-          <p>Bekräftelse skickas till <strong>{success?.email}</strong></p>
-          {user ? (
-            <Link to="/konto" className="btn btn-primary">Gå till mina sidor</Link>
+
+          {inv ? (
+            <Card style={{ marginTop: '2rem', textAlign: 'left', border: '1px solid var(--blue-100)', background: 'var(--blue-50)' }}>
+              <h3 style={{ color: 'var(--blue-700)', marginBottom: '1rem' }}>Betalningsinformation</h3>
+              <p style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>Din faktura <strong>{inv.invoice_number}</strong> har skapats.</p>
+              <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', padding: '1rem', background: 'white', borderRadius: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Att betala:</span><strong>{parseFloat(inv.total_amount).toLocaleString('sv-SE')} kr</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bankgiro / Konto:</span><strong>{company?.bank_account || '—'}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Ange referens:</span><strong>{inv.invoice_number}</strong></div>
+              </div>
+              <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+                <a href={`/api/invoices/${inv.id}/pdf`} download className="btn btn-primary btn-sm">Ladda ner faktura (PDF)</a>
+              </div>
+            </Card>
           ) : (
-            <button className="btn btn-primary" onClick={() => { setStep(0); setForm({ course_id: '', booking_date: '', booking_time: '09:00', participants: 1, first_name: '', last_name: '', email: '', phone: '', equipment_ids: [], notes: '', schedule_id: null, gdprConsent: false }) }}>
-              Gör en ny bokning
-            </button>
+            <p>Bekräftelse skickas till <strong>{success?.email}</strong></p>
           )}
+
+          <div style={{ marginTop: '2rem' }}>
+            {user ? (
+              <Link to="/konto" className="btn btn-secondary">Gå till mina sidor</Link>
+            ) : (
+              <button className="btn btn-secondary" onClick={() => { setStep(0); setForm({ course_id: '', booking_date: '', booking_time: '09:00', participants: 1, first_name: '', last_name: '', email: '', phone: '', equipment_ids: [], notes: '', schedule_id: null, gdprConsent: false }) }}>
+                Gör en ny bokning
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )

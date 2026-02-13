@@ -17,6 +17,7 @@ import Register from './pages/public/Register.jsx'
 import Login from './pages/public/Login.jsx'
 import Account from './pages/public/Account.jsx'
 import PrivacyPolicy from './pages/public/PrivacyPolicy.jsx'
+import Checkout from './pages/public/Checkout.jsx'
 
 // Admin pages
 import AdminLogin from './pages/admin/Login.jsx'
@@ -129,6 +130,7 @@ export default function App() {
         <Route path="/loggain" element={<PublicLayout><Login /></PublicLayout>} />
         <Route path="/konto" element={<PublicLayout><Account /></PublicLayout>} />
         <Route path="/integritetspolicy" element={<PublicLayout><PrivacyPolicy /></PublicLayout>} />
+        <Route path="/kassa" element={<PublicLayout><Checkout /></PublicLayout>} />
 
         {/* Admin */}
         <Route path="/admin/login" element={<AdminLogin />} />

@@ -16,6 +16,7 @@ import settingsRoutes from './routes/settings.js'
 import contactRoutes from './routes/contact.js'
 import usersRoutes from './routes/users.js'
 import inventoryRoutes from './routes/inventory.js'
+import ordersRoutes from './routes/orders.js'
 
 dotenv.config()
 
@@ -100,6 +101,7 @@ app.use('/api/settings', settingsRoutes)
 app.use('/api/contact', contactRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/inventory', inventoryRoutes)
+app.use('/api/orders', ordersRoutes)
 
 // ── 404 ───────────────────────────────────────────────────────
 app.use('/api/*', (_req, res) => {
