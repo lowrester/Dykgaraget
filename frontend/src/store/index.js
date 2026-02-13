@@ -76,6 +76,8 @@ export const useAuthStore = create((set) => ({
 export const useSettingsStore = create((set, get) => ({
   features: {
     equipment: true,
+    equipment_rent: true,
+    equipment_sale: true,
     invoicing: true,
     payment: false,
     email: true,

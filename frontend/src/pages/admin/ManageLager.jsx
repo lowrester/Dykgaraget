@@ -135,7 +135,13 @@ export default function ManageLager() {
                         <tbody>
                             {articles.map(e => (
                                 <tr key={e.id}>
-                                    <td><strong>{e.name}</strong> <small style={{ color: '#666' }}>{e.size}</small></td>
+                                    <td>
+                                        <strong>{e.name}</strong> <small style={{ color: '#666' }}>{e.size}</small>
+                                        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                            {e.is_for_rent && <Badge variant="info" style={{ fontSize: '0.6rem', padding: '1px 4px' }}>Hyr</Badge>}
+                                            {e.is_for_sale && <Badge variant="warning" style={{ fontSize: '0.6rem', padding: '1px 4px' }}>Köp</Badge>}
+                                        </div>
+                                    </td>
                                     <td>{e.category}</td>
                                     <td>{e.quantity_available} / {e.quantity_total}</td>
                                     <td>

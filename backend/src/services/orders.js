@@ -87,10 +87,11 @@ export async function processOrder(orderData, client = pool) {
                     [item.equipmentId]
                 )
                 // Log transaction
+                const isRental = item.name.startsWith('Hyra:')
                 await client.query(
                     `INSERT INTO inventory_transactions (equipment_id, type, change, notes)
-           VALUES ($1, 'sale', -1, $2)`,
-                    [item.equipmentId, `Uthyrning via order: ${email}`]
+                     VALUES ($1, $2, -1, $3)`,
+                    [item.equipmentId, isRental ? 'rental' : 'sale', `${isRental ? 'Uthyrning' : 'Försäljning'} via order: ${email}`]
                 )
             }
         }

@@ -341,7 +341,7 @@ export default function Booking() {
                   <button onClick={() => setWantsToRent(false)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.9rem' }}>← Ångra/Göm</button>
                 </div>
                 <div className="equipment-grid">
-                  {equipment.map((item) => (
+                  {equipment.filter(e => e.is_active && e.is_for_rent).map((item) => (
                     <div
                       key={item.id}
                       className={`equipment-option ${form.equipment_ids.includes(item.id) ? 'selected' : ''}`}

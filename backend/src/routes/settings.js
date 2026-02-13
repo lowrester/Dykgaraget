@@ -48,12 +48,33 @@ router.put('/:key', authenticateAdmin, async (req, res) => {
       }
     }
 
+    // Dependency check: equipment rent/sale requires equipment module
+    if ((key === 'feature_equipment_rent' || key === 'feature_equipment_sale') && (value === true || value === 'true')) {
+      const eq = await pool.query(
+        "SELECT value FROM settings WHERE key = 'feature_equipment'"
+      )
+      if (eq.rows[0]?.value !== 'true') {
+        return res.status(400).json({
+          error: 'Utrustningsmodulen måste vara aktiverad innan delmoduler kan aktiveras'
+        })
+      }
+    }
+
     // If invoicing is being disabled, also disable payment
     if (key === 'feature_invoicing' && (value === false || value === 'false')) {
       await pool.query(
         "UPDATE settings SET value = 'false', updated_at = NOW() WHERE key = 'feature_payment'"
       )
       await logAction(req.user.id, 'DISABLE_SETTING', 'settings', null, { key: 'feature_payment', reason: 'dependency' }, req)
+    }
+
+    // If equipment is being disabled, also disable rent and sale
+    if (key === 'feature_equipment' && (value === false || value === 'false')) {
+      await pool.query(
+        "UPDATE settings SET value = 'false', updated_at = NOW() WHERE key IN ('feature_equipment_rent', 'feature_equipment_sale')"
+      )
+      await logAction(req.user.id, 'DISABLE_SETTING', 'settings', null, { key: 'feature_equipment_rent', reason: 'dependency' }, req)
+      await logAction(req.user.id, 'DISABLE_SETTING', 'settings', null, { key: 'feature_equipment_sale', reason: 'dependency' }, req)
     }
 
     const result = await pool.query(

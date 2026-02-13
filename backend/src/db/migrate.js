@@ -322,6 +322,17 @@ async function run() {
       ON CONFLICT (key) DO NOTHING;
     `)
 
+    await runMigration('013_equipment_rent_sale_split', `
+      ALTER TABLE equipment ADD COLUMN IF NOT EXISTS is_for_rent BOOLEAN DEFAULT true;
+      ALTER TABLE equipment ADD COLUMN IF NOT EXISTS is_for_sale BOOLEAN DEFAULT false;
+      ALTER TABLE equipment ADD COLUMN IF NOT EXISTS sale_price NUMERIC(10,2) DEFAULT 0;
+
+      INSERT INTO settings (key, value, category, description) VALUES
+      ('feature_equipment_rent', 'true', 'features', 'Uthyrning av utrustning (vid bokning)'),
+      ('feature_equipment_sale', 'true', 'features', 'Försäljning av utrustning (webshop)')
+      ON CONFLICT (key) DO NOTHING;
+    `)
+
     // ── Seed Migrations ───────────────────────────────────────
     await runMigration('seed_settings', `
       INSERT INTO settings (key,value,category,description) VALUES

@@ -18,14 +18,27 @@ router.get('/', async (req, res) => {
 // POST /api/equipment  (admin)
 router.post('/', authenticateAdmin, async (req, res) => {
   try {
-    const { name, category, size, quantity_total, rental_price, condition, is_active = true } = req.body
+    const {
+      name, category, size, quantity_total, rental_price,
+      is_for_rent = true, is_for_sale = false, sale_price = 0,
+      condition, is_active = true
+    } = req.body
+
     if (!name || !category) return res.status(400).json({ error: 'Namn och kategori krävs' })
 
     const qty = quantity_total || 1
     const result = await pool.query(
-      `INSERT INTO equipment (name,category,size,quantity_total,quantity_available,rental_price,condition,is_active)
-       VALUES ($1,$2,$3,$4,$4,$5,$6,$7) RETURNING *`,
-      [name, category, size, qty, rental_price || 0, condition || 'god', is_active]
+      `INSERT INTO equipment (
+         name, category, size, quantity_total, quantity_available, 
+         rental_price, is_for_rent, is_for_sale, sale_price, 
+         condition, is_active
+       )
+       VALUES ($1,$2,$3,$4,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [
+        name, category, size, qty, rental_price || 0,
+        is_for_rent, is_for_sale, sale_price || 0,
+        condition || 'god', is_active
+      ]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -36,9 +49,13 @@ router.post('/', authenticateAdmin, async (req, res) => {
 // PUT /api/equipment/:id  (admin)
 router.put('/:id', authenticateAdmin, async (req, res) => {
   try {
-    const fields = ['name','category','size','quantity_total','quantity_available','rental_price','condition','is_active']
+    const fields = [
+      'name', 'category', 'size', 'quantity_total', 'quantity_available',
+      'rental_price', 'is_for_rent', 'is_for_sale', 'sale_price',
+      'condition', 'is_active'
+    ]
     const updates = []
-    const values  = []
+    const values = []
     let i = 1
     for (const field of fields) {
       if (req.body[field] !== undefined) {

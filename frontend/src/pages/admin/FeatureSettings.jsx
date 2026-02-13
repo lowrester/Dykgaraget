@@ -3,7 +3,9 @@ import { useSettingsStore, useUIStore, useHealthStore } from '../../store/index.
 import { AdminLayout, Card, Spinner, Button, Badge, Input, Textarea } from '../../components/common/index.jsx'
 
 const FEATURE_META = {
-  equipment: { label: 'Utrustningsmodul', icon: '🤿', desc: 'Utrustningshantering, inventarie och uthyrning vid bokning.', deps: [] },
+  equipment: { label: 'Utrustningsmodul', icon: '🤿', desc: 'Huvudmodul för utrustning. Måste vara på för att hyra/köpa.', deps: [], required_by: ['equipment_rent', 'equipment_sale'] },
+  equipment_rent: { label: 'Hyra (Bokning)', icon: '📦', desc: 'Möjliggör hyra av utrustning som tillval vid kursbokning.', deps: ['equipment'] },
+  equipment_sale: { label: 'Köp (Webshop)', icon: '🛍️', desc: 'Möjliggör försäljning av artiklar direkt på webbplatsen.', deps: ['equipment'] },
   invoicing: { label: 'Faktureringsmodul', icon: '🧾', desc: 'PDF-fakturering och e-postutskick till kunder.', deps: [], required_by: ['payment'] },
   payment: { label: 'Betalningsmodul', icon: '💳', desc: 'Onlinebetalning via Stripe. Kräver att faktureringsmodulen är aktiverad.', deps: ['invoicing'] },
   email: { label: 'E-postmodul', icon: '✉️', desc: 'Bokningsbekräftelser och fakturanotiser via e-post.', deps: [] },
