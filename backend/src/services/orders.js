@@ -1,5 +1,20 @@
 import { pool } from '../db/connection.js'
-import { createInvoiceFromBooking, nextSeq } from './invoicing.js'
+import { nextSeq } from './invoicing.js'
+import bcrypt from 'bcryptjs'
+import { sendEmail } from './email.js'
+
+/**
+ * generatePassword - Generates a secure 12-char password
+ * No åäö, has special chars.
+ */
+function generatePassword() {
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+"
+    let retVal = ""
+    for (let i = 0, n = charset.length; i < 12; ++i) {
+        retVal += charset.charAt(Math.floor(Math.random() * n))
+    }
+    return retVal
+}
 
 /**
  * processOrder - Handles the creation of multiple bookings and a single invoice.
@@ -7,12 +22,36 @@ import { createInvoiceFromBooking, nextSeq } from './invoicing.js'
 export async function processOrder(orderData, client = pool) {
     const {
         items, first_name, last_name, email, phone,
-        customer_id, payment_method, address, zip, city
+        customer_id, payment_method, address, zip, city,
+        create_account
     } = orderData
+
+    let userId = customer_id
+    let generatedPassword = null
 
     await client.query('BEGIN')
 
     try {
+        // 0. Handle Auto-Registration
+        if (create_account && !userId) {
+            // Check if user already exists
+            const existing = await client.query('SELECT id FROM users WHERE email = $1', [email])
+            if (existing.rows.length > 0) {
+                userId = existing.rows[0].id
+            } else {
+                generatedPassword = generatePassword()
+                const hash = await bcrypt.hash(generatedPassword, 10)
+                // Use email as username for simplicity in auto-reg
+                const userRes = await client.query(
+                    `INSERT INTO users 
+                     (username, email, password_hash, first_name, last_name, role, phone, address, gdpr_consent, gdpr_consent_date)
+                     VALUES ($1, $2, $3, $4, $5, 'customer', $6, $7, true, NOW()) RETURNING id`,
+                    [email, email, hash, first_name, last_name, phone, `${address || ''} ${zip || ''} ${city || ''}`]
+                )
+                userId = userRes.rows[0].id
+            }
+        }
+
         const bookings = []
         const rentals = []
 
@@ -27,7 +66,7 @@ export async function processOrder(orderData, client = pool) {
                     [
                         item.courseId, item.date, item.time || '09:00', item.participants || 1,
                         first_name, last_name, email, phone, item.notes || '',
-                        'confirmed', customer_id, item.scheduleId || null, item.price
+                        'confirmed', userId, item.scheduleId || null, item.price
                     ]
                 )
                 bookings.push(result.rows[0])
@@ -52,6 +91,32 @@ export async function processOrder(orderData, client = pool) {
         const invoice = await createUnifiedInvoice(bookings, rentals, orderData, client)
 
         await client.query('COMMIT')
+
+        // 3. Post-commit: Send welcome email if account was created
+        if (generatedPassword) {
+            try {
+                await sendEmail({
+                    to: email,
+                    subject: 'Välkommen till Dykgaraget - Ditt konto är skapat',
+                    html: `
+                        <h1>Hej ${first_name}!</h1>
+                        <p>Tack för din beställning. Vi har skapat ett konto åt dig så att du smidigt kan se dina bokningar och ladda ner kvitton.</p>
+                        <p><strong>Dina inloggningsuppgifter:</strong></p>
+                        <ul>
+                            <li><strong>Användarnamn:</strong> ${email}</li>
+                            <li><strong>Lösenord:</strong> <code>${generatedPassword}</code></li>
+                        </ul>
+                        <p>Vi rekommenderar att du byter lösenord första gången du loggar in.</p>
+                        <p><a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/loggain">Logga in här</a></p>
+                        <br/>
+                        <p>Med vänliga hälsningar,<br/>Dykgaraget</p>
+                    `
+                })
+            } catch (emailErr) {
+                console.error('Failed to send welcome email:', emailErr)
+                // Don't fail the whole order if email fails
+            }
+        }
 
         // Fetch company info for response
         const companyRes = await client.query("SELECT key, value FROM settings WHERE category = 'company'")

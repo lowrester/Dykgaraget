@@ -20,7 +20,8 @@ export default function Checkout() {
         zip: '',
         city: '',
         payment_method: 'invoice', // invoice or stripe
-        gdprConsent: customerInfo?.gdprConsent || !!user
+        gdprConsent: customerInfo?.gdprConsent || !!user,
+        create_account: false
     })
     const [errors, setErrors] = useState({})
     const [loading, setLoading] = useState(false)
@@ -204,7 +205,7 @@ export default function Checkout() {
                                     background: form.payment_method === 'invoice' ? 'var(--blue-50)' : 'white'
                                 }}
                             >
-                                <input type="radio" name="payment" value="invoice" checked={form.payment_method === 'invoice'} onChange={(e) => set('payment_method', e.value)} style={{ display: 'none' }} />
+                                <input type="radio" name="payment" value="invoice" checked={form.payment_method === 'invoice'} onChange={(e) => set('payment_method', e.target.value)} style={{ display: 'none' }} />
                                 <div style={{ fontSize: '1.5rem' }}>🧾</div>
                                 <div>
                                     <div style={{ fontWeight: 'bold' }}>Faktura (30 dagar)</div>
@@ -222,7 +223,7 @@ export default function Checkout() {
                                         background: form.payment_method === 'stripe' ? 'var(--blue-50)' : 'white'
                                     }}
                                 >
-                                    <input type="radio" name="payment" value="stripe" checked={form.payment_method === 'stripe'} onChange={(e) => set('payment_method', e.value)} style={{ display: 'none' }} />
+                                    <input type="radio" name="payment" value="stripe" checked={form.payment_method === 'stripe'} onChange={(e) => set('payment_method', e.target.value)} style={{ display: 'none' }} />
                                     <div style={{ fontSize: '1.5rem' }}>💳</div>
                                     <div>
                                         <div style={{ fontWeight: 'bold' }}>Kortbetalning (Stripe)</div>
@@ -232,7 +233,14 @@ export default function Checkout() {
                             )}
                         </div>
 
-                        <div style={{ marginTop: '2rem' }}>
+                        <div style={{ marginTop: '2rem', display: 'grid', gap: '1rem' }}>
+                            {!user && (
+                                <label className="checkbox-container" style={{ display: 'flex', gap: '0.75rem', fontSize: '0.9rem', cursor: 'pointer', padding: '0.5rem', background: 'var(--blue-50)', borderRadius: '4px', border: '1px dashed var(--blue-200)' }}>
+                                    <input type="checkbox" checked={form.create_account} onChange={e => set('create_account', e.target.checked)} />
+                                    <span><strong>Spara mina uppgifter och skapa ett konto</strong><br /><small style={{ color: 'var(--gray-600)' }}>Vi mailar ut ett lösenord till dig efter genomfört köp.</small></span>
+                                </label>
+                            )}
+
                             <label className="checkbox-container" style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', cursor: 'pointer' }}>
                                 <input type="checkbox" checked={form.gdprConsent} onChange={e => set('gdprConsent', e.target.checked)} required />
                                 <span>Jag godkänner att Dykgaraget sparar mina personuppgifter enligt <Link to="/integritetspolicy" target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>integritetspolicyn</Link>.*</span>
