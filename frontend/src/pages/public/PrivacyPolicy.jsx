@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 export default function PrivacyPolicy() {
     return (
         <div className="page container" style={{ maxWidth: '800px' }}>
-            <h1 className="page-title">integritetspolicy</h1>
+            <h1 className="page-title">Integritetspolicy</h1>
             <p className="page-subtitle">Senast uppdaterad: {new Date().toLocaleDateString('sv-SE')}</p>
 
             <section className="section">

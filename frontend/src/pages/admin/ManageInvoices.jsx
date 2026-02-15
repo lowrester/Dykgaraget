@@ -20,7 +20,83 @@ export default function ManageInvoices() {
     notes: ''
   })
 
-  // ... (keeping other handlers same as before)
+  useEffect(() => { 
+    fetch(); 
+    fetchBookings(); 
+    fetchCourses(); 
+    fetchEquipment(); 
+  }, [fetch, fetchBookings, fetchCourses, fetchEquipment])
+
+  const setWork = (id, val) => setWorking(w => ({ ...w, [id]: val }))
+
+  const handleCreate = async (bookingId) => {
+    setWork(bookingId, 'creating')
+    try {
+      await create(bookingId)
+      addToast('Faktura skapad!')
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally { setWork(bookingId, null) }
+  }
+
+  const handleEmail = async (invoice) => {
+    setWork(invoice.id, 'emailing')
+    try {
+      await sendEmail(invoice.id)
+      addToast(`Faktura skickad till ${invoice.buyer_email}`)
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally { setWork(invoice.id, null) }
+  }
+
+  const handlePaid = async (invoice) => {
+    const ok = await ask({ title: 'Markera som betald?', message: `Vill du markera faktura ${invoice.invoice_number} som betald?` })
+    if (!ok) return
+    setWork(invoice.id, 'paying')
+    try {
+      await markPaid(invoice.id)
+      addToast('Faktura markerad som betald')
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally { setWork(invoice.id, null) }
+  }
+
+  const handleArchive = async (invoice) => {
+    setWork(invoice.id, 'archiving')
+    try {
+      await archiveInvoice(invoice.id, !invoice.is_archived)
+      addToast(invoice.is_archived ? 'Faktura återställd' : 'Faktura arkiverad')
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally { setWork(invoice.id, null) }
+  }
+
+  const handleManualSubmit = async (e) => {
+    if (e) e.preventDefault()
+    setWork('manual', 'creating')
+    try {
+      await createManual(manualInvoice)
+      addToast('Manuell faktura skapad!')
+      setShowManualModal(false)
+      setManualInvoice({
+        buyer_name: '', buyer_email: '', buyer_address: '', buyer_vat_number: '',
+        items: [{ description: '', quantity: 1, unit_price: 0, vat_rate: 0.25 }],
+        terms_days: 30,
+        supply_date: new Date().toISOString().split('T')[0],
+        notes: ''
+      })
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally { setWork('manual', null) }
+  }
+
+  const handlePreview = async () => {
+    try {
+      await previewInvoice(manualInvoice)
+    } catch (err) {
+      addToast(err.message, 'error')
+    }
+  }
 
   const addLineItem = () => {
     setManualInvoice(m => ({ ...m, items: [...m.items, { description: '', quantity: 1, unit_price: 0, vat_rate: 0.25 }] }))
@@ -38,19 +114,18 @@ export default function ManageInvoices() {
       if (c) {
         updateLineItem(idx, 'description', `Kurs: ${c.name} (${c.level})`)
         updateLineItem(idx, 'unit_price', c.price)
-        updateLineItem(idx, 'vat_rate', 0.06) // 6% for courses
+        updateLineItem(idx, 'vat_rate', 0.06)
       }
     } else {
       const e = equipment.find(x => x.id === parseInt(id))
       if (e) {
         updateLineItem(idx, 'description', `Hyra: ${e.name} (${e.size || ''})`)
         updateLineItem(idx, 'unit_price', e.rental_price)
-        updateLineItem(idx, 'vat_rate', 0.25) // 25% for equipment
+        updateLineItem(idx, 'vat_rate', 0.25)
       }
     }
   }
 
-  // Calculate manual totals with VAT split
   const getManualStats = () => {
     let subtotal = 0
     const vatSplits = { '0.25': 0, '0.12': 0, '0.06': 0 }
@@ -67,41 +142,113 @@ export default function ManageInvoices() {
   }
 
   const stats = getManualStats()
+  const uninvoiced = bookings.filter(b => b.status !== 'cancelled' && !invoices.find(i => i.booking_id === b.id))
+  const displayInvoices = invoices.filter(i => showArchived ? i.is_archived : !i.is_archived)
 
   return (
     <AdminLayout title="Fakturering">
-      {/* ... previous content ... */}
+      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Button variant={showArchived ? 'secondary' : 'primary'} onClick={() => setShowArchived(false)}>Aktiva</Button>
+          <Button variant={showArchived ? 'primary' : 'secondary'} onClick={() => setShowArchived(true)}>Arkiv</Button>
+        </div>
+        <Button onClick={() => setShowManualModal(true)}>+ Skapa manuell faktura</Button>
+      </div>
+
+      {uninvoiced.length > 0 && !showArchived && (
+        <Card style={{ marginBottom: '2rem' }}>
+          <h3 style={{ marginTop: 0 }}>Bokningar utan faktura ({uninvoiced.length})</h3>
+          <table className="admin-table">
+            <thead>
+              <tr><th>#</th><th>Kund</th><th>Kurs</th><th>Datum</th><th>Belopp</th><th>Åtgärd</th></tr>
+            </thead>
+            <tbody>
+              {uninvoiced.map(b => (
+                <tr key={b.id}>
+                  <td>#{b.id}</td>
+                  <td>{b.first_name} {b.last_name}</td>
+                  <td>{b.course_name || '—'}</td>
+                  <td>{b.booking_date}</td>
+                  <td>{parseFloat(b.total_price).toLocaleString('sv-SE')} kr</td>
+                  <td>
+                    <Button size="sm" loading={working[b.id] === 'creating'} onClick={() => handleCreate(b.id)}>
+                      Skapa faktura
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      <Card>
+        <table className="admin-table">
+          <thead>
+            <tr><th>Fakturanr</th><th>Kund</th><th>Datum</th><th>Belopp</th><th>Status</th><th>Åtgärder</th></tr>
+          </thead>
+          <tbody>
+            {displayInvoices.length === 0 && (
+              <tr><td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>Inga fakturor att visa</td></tr>
+            )}
+            {displayInvoices.map(inv => (
+              <tr key={inv.id}>
+                <td><strong>{inv.invoice_number}</strong></td>
+                <td>
+                  <div style={{ fontWeight: 600 }}>{inv.buyer_name}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#666' }}>{inv.buyer_email}</div>
+                </td>
+                <td>{inv.invoice_date}</td>
+                <td>{parseFloat(inv.total_amount).toLocaleString('sv-SE')} kr</td>
+                <td>
+                  <Badge variant={inv.status === 'paid' ? 'success' : 'warning'}>
+                    {inv.status === 'paid' ? 'Betald' : 'Obetald'}
+                  </Badge>
+                </td>
+                <td style={{ display: 'flex', gap: '0.5rem' }}>
+                  <Button size="sm" variant="secondary" onClick={() => downloadPdf(inv.id)}>PDF</Button>
+                  <Button size="sm" variant="secondary" loading={working[inv.id] === 'emailing'} onClick={() => handleEmail(inv)}>E-post</Button>
+                  {inv.status !== 'paid' && (
+                    <Button size="sm" variant="success" loading={working[inv.id] === 'paying'} onClick={() => handlePaid(inv)}>Betald</Button>
+                  )}
+                  <Button size="sm" variant="ghost" loading={working[inv.id] === 'archiving'} onClick={() => handleArchive(inv)}>
+                    {inv.is_archived ? 'Återställ' : 'Arkivera'}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
 
       {showManualModal && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '1000px', padding: 0, overflow: 'hidden' }}>
             <div className="modal-header" style={{ padding: '1.5rem 2rem', background: 'var(--gray-900)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: '1.25rem' }}>Invoice Builder <span style={{ fontWeight: 400, opacity: 0.6, fontSize: '0.9rem', marginLeft: '0.5rem' }}>— Multi-VAT (2026 Ready)</span></h2>
-              <button onClick={() => setShowManualModal(false)} style={{ color: 'white', fontSize: '1.5rem', opacity: 0.5 }}>×</button>
+              <button onClick={() => setShowManualModal(false)} style={{ color: 'white', fontSize: '1.5rem', opacity: 0.5, background: 'none', border: 'none' }}>×</button>
             </div>
 
             <form onSubmit={handleManualSubmit} style={{ padding: '2rem' }}>
               <div className="grid grid-2" style={{ gap: '2.5rem' }}>
-                {/* Section: Customer */}
                 <div>
                   <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary)' }}>
                     <span>👤</span> Kunduppgifter
                   </h4>
                   <div className="form-group">
                     <label>Företag / Namn</label>
-                    <input type="text" placeholder="T.ex. Dykarstugan AB" value={manualInvoice.buyer_name} onChange={e => setManualInvoice({ ...manualInvoice, buyer_name: e.target.value })} required />
+                    <input type="text" value={manualInvoice.buyer_name} onChange={e => setManualInvoice({ ...manualInvoice, buyer_name: e.target.value })} required />
                   </div>
                   <div className="form-group">
                     <label>E-post för faktura</label>
-                    <input type="email" placeholder="ekonomi@exempel.se" value={manualInvoice.buyer_email} onChange={e => setManualInvoice({ ...manualInvoice, buyer_email: e.target.value })} required />
+                    <input type="email" value={manualInvoice.buyer_email} onChange={e => setManualInvoice({ ...manualInvoice, buyer_email: e.target.value })} required />
                   </div>
                   <div className="form-group">
                     <label>Postmottagare & Adress</label>
-                    <textarea rows="3" placeholder="Gatuadress&#10;Postnummer och ort" value={manualInvoice.buyer_address} onChange={e => setManualInvoice({ ...manualInvoice, buyer_address: e.target.value })} />
+                    <textarea rows="3" value={manualInvoice.buyer_address} onChange={e => setManualInvoice({ ...manualInvoice, buyer_address: e.target.value })} />
                   </div>
                 </div>
 
-                {/* Section: Invoice Details */}
                 <div>
                   <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary)' }}>
                     <span>📄</span> Fakturadetaljer
@@ -122,12 +269,12 @@ export default function ManageInvoices() {
                     </div>
                   </div>
                   <div className="form-group">
-                    <label>Köparens VAT-nummer (valfritt)</label>
-                    <input type="text" placeholder="T.ex. SE12345678901" value={manualInvoice.buyer_vat_number} onChange={e => setManualInvoice({ ...manualInvoice, buyer_vat_number: e.target.value })} />
+                    <label>Köparens VAT-nummer</label>
+                    <input type="text" value={manualInvoice.buyer_vat_number} onChange={e => setManualInvoice({ ...manualInvoice, buyer_vat_number: e.target.value })} />
                   </div>
                   <div className="form-group">
-                    <label>Faktura-notering (visas på PDF)</label>
-                    <input type="text" placeholder="T.ex. Projekt X eller referensnummer" value={manualInvoice.notes} onChange={e => setManualInvoice({ ...manualInvoice, notes: e.target.value })} />
+                    <label>Faktura-notering</label>
+                    <input type="text" value={manualInvoice.notes} onChange={e => setManualInvoice({ ...manualInvoice, notes: e.target.value })} />
                   </div>
                 </div>
               </div>
@@ -147,11 +294,11 @@ export default function ManageInvoices() {
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="label-sm">Antal</label>
-                        <input type="number" min="1" step="0.1" value={item.quantity} onChange={e => updateLineItem(idx, 'quantity', e.target.value)} required />
+                        <input type="number" step="0.1" value={item.quantity} onChange={e => updateLineItem(idx, 'quantity', e.target.value)} required />
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="label-sm">À-pris</label>
-                        <input type="number" min="0" value={item.unit_price} onChange={e => updateLineItem(idx, 'unit_price', e.target.value)} required />
+                        <input type="number" value={item.unit_price} onChange={e => updateLineItem(idx, 'unit_price', e.target.value)} required />
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
                         <label className="label-sm">Moms</label>
@@ -188,36 +335,28 @@ export default function ManageInvoices() {
                 <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'flex-end' }}>
                   <div style={{ minWidth: '320px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span style={{ color: '#666' }}>Summa Netto:</span>
+                      <span>Summa Netto:</span>
                       <span style={{ fontWeight: 600 }}>{stats.subtotal.toLocaleString('sv-SE')} kr</span>
                     </div>
-
                     {Object.entries(stats.vatSplits).map(([rate, val]) => val > 0 && (
                       <div key={rate} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', fontSize: '0.9rem', color: '#666' }}>
                         <span>Moms ({Math.round(rate * 100)}%):</span>
-                        <span style={{ fontWeight: 500 }}>{val.toLocaleString('sv-SE')} kr</span>
+                        <span>{val.toLocaleString('sv-SE')} kr</span>
                       </div>
                     ))}
-
                     <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '2px solid #eee', display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>Att betala:</span>
-                      <span style={{ fontWeight: 800, fontSize: '1.35rem', color: 'var(--primary)' }}>
-                        {stats.total.toLocaleString('sv-SE')} kr
-                      </span>
+                      <span style={{ fontWeight: 700 }}>Att betala:</span>
+                      <span style={{ fontWeight: 800, color: 'var(--primary)' }}>{stats.total.toLocaleString('sv-SE')} kr</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div style={{ marginTop: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ marginTop: '3rem', display: 'flex', justifyContent: 'space-between' }}>
                 <Button type="button" variant="ghost" onClick={() => setShowManualModal(false)}>Avbryt</Button>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                  <Button type="button" variant="secondary" onClick={handlePreview}>
-                    👁 Förhandsgranska PDF
-                  </Button>
-                  <Button type="submit" variant="primary" loading={working.manual === 'creating'}>
-                    Skapa & registrera faktura
-                  </Button>
+                  <Button type="button" variant="secondary" onClick={handlePreview}>👁 Förhandsgranska</Button>
+                  <Button type="submit" loading={working.manual === 'creating'}>Skapa faktura</Button>
                 </div>
               </div>
             </form>

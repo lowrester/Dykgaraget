@@ -97,7 +97,7 @@ export async function processOrder(orderData, client = pool) {
         }
 
         // 2. Create the unified invoice
-        const invoice = await createUnifiedInvoice(bookings, rentals, orderData, client)
+        const invoice = await createUnifiedInvoice(bookings, rentals, orderData, client, userId)
 
         await client.query('COMMIT')
 
@@ -141,7 +141,7 @@ export async function processOrder(orderData, client = pool) {
     }
 }
 
-async function createUnifiedInvoice(bookings, rentals, orderData, client) {
+async function createUnifiedInvoice(bookings, rentals, orderData, client, userId = null) {
     const { first_name, last_name, email, address, zip, city } = orderData
 
     const prefixRes = await client.query("SELECT value FROM settings WHERE key = 'invoice_prefix'")
@@ -200,12 +200,12 @@ async function createUnifiedInvoice(bookings, rentals, orderData, client) {
     const invRes = await client.query(
         `INSERT INTO invoices
        (invoice_number, buyer_name, buyer_email, buyer_address,
-        subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days, vat_summary)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid', $10, $11) RETURNING *`,
+        subtotal, vat_rate, vat_amount, total_amount, due_date, status, terms_days, vat_summary, user_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'unpaid', $10, $11, $12) RETURNING *`,
         [
             invoiceNumber, `${first_name} ${last_name}`, email, fullAddress,
-            subtotal.toFixed(2), 0.06, totalVat.toFixed(2), totalAmount.toFixed(2),
-            dueDate.toISOString().split('T')[0], termsDays, JSON.stringify(vatSummary)
+            subtotal.toFixed(2), 0.25, totalVat.toFixed(2), totalAmount.toFixed(2),
+            dueDate.toISOString().split('T')[0], termsDays, JSON.stringify(vatSummary), userId
         ]
     )
     const invoice = invRes.rows[0]
